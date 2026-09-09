@@ -5,6 +5,11 @@ al margen del TPV.
 
 ## Poner en marcha
 
+En el PC de la clienta, doble clic en **`iniciar.bat`** — busca actualizaciones (si hay internet y
+está configurado el repositorio, ver más abajo), instala dependencias si han cambiado, y abre la app
+en el navegador. Es el único icono que necesita la clienta.
+
+Para desarrollo (en tu PC):
 ```
 venv\Scripts\python.exe app.py
 ```
@@ -59,6 +64,36 @@ si cierras un turno así, la caja se cierra y los errores se borran igualmente, 
    https://myaccount.google.com/apppasswords (la contraseña normal de la cuenta no sirve para esto).
 3. Rellena en `config.py`: `SMTP_USER` (el correo remitente) y `SMTP_PASSWORD` (la contraseña de
    aplicación, no la normal). `EMAIL_DESTINO` es a quién le llega el informe.
+
+## Actualizar la app en el PC de la clienta
+
+El proyecto ya es un repositorio git (`git init` hecho, primer commit hecho). `data/` (la base de datos
+real de la clienta) y `config.py` (sus contraseñas) están en `.gitignore` — un `git pull` nunca los toca,
+solo actualiza el código. Para dejarlo funcionando de verdad falta un paso único que tienes que hacer tú
+con tu cuenta:
+
+**Una vez, desde tu PC:**
+1. Crea un repositorio **privado** en GitHub (github.com → New repository → Private).
+2. Conéctalo y sube el código:
+   ```
+   git remote add origin https://github.com/TU-USUARIO/NOMBRE-REPO.git
+   git branch -M main
+   git push -u origin main
+   ```
+
+**Una vez, en el PC de la clienta** (necesita [Git for Windows](https://git-scm.com/download/win)
+instalado — instalador normal, todo por defecto):
+```
+git clone https://github.com/TU-USUARIO/NOMBRE-REPO.git
+```
+Eso crea la carpeta del proyecto ya conectada al repositorio. Copia dentro tu `venv/` (o créalo de
+nuevo con `py -m venv venv` + `venv\Scripts\python.exe -m pip install -r requirements.txt`), copia
+`config.example.py` como `config.py` y rellénalo con la contraseña real y los datos de correo.
+
+**A partir de ahí**, cada vez que quieras publicar un cambio: edítalo aquí, `git add -A`,
+`git commit -m "..."`, `git push`. La próxima vez que la clienta (o quien sea) haga doble clic en
+`iniciar.bat`, `git pull` se trae los cambios solo, sin que nadie tenga que hacer nada más. Si un día
+no hay internet, `iniciar.bat` sigue arrancando igual con la versión que ya tenía.
 
 ## Datos
 
