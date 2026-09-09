@@ -1,0 +1,72 @@
+# Gestión interna (merma, reciclaje, autoconsumo, errores)
+
+App sencilla para llevar el control interno de merma, reciclaje, autoconsumo y errores de caja,
+al margen del TPV.
+
+## Poner en marcha
+
+```
+venv\Scripts\python.exe app.py
+```
+
+Abre http://127.0.0.1:5000. Hay dos formas de entrar:
+
+- **Empleadas**: un botón por cada empleada dada de alta (sin contraseña) — solo pueden registrar
+  tickets, y en "Hoy" solo ven los suyos. No pueden entrar a Productos, Empleadas ni Informes
+  (si prueban la URL directamente, la app las redirige a Registrar).
+- **Administración (Cristina)**: acceso completo con contraseña — por defecto `Panaderia2026`
+  (cámbiala en `config.py`, junto con `ADMIN_NOMBRE` si el nombre cambia).
+
+Para cargar un catálogo y unos movimientos de ejemplo (útil para hacer una demo):
+
+```
+venv\Scripts\python.exe seed_demo.py
+```
+
+Esto borra `data/app.db` si existe y lo vuelve a crear con ~19 productos de panadería/cafetería
+y unos días de movimientos de ejemplo. No lo ejecutes sobre datos reales de la clienta.
+
+## Uso
+
+1. **Productos**: añade productos a mano o impórtalos desde un Excel/CSV exportado del back office de GOTPV
+   (en el paso de importación puedes indicar qué columna es el nombre, precio, coste, etc.).
+2. **Registrar**: pantalla tipo TPV — se van tocando los productos de la carta (pueden ser varios, de
+   categorías distintas) para montar un ticket, se elige el tipo (merma/reciclaje/autoconsumo/errores),
+   quién lo registra y el turno (mañana/tarde), y se registra de una vez. El valor se calcula solo a
+   partir del coste/precio del producto.
+3. **Turno (apertura/cierre de caja)**: arriba del todo en Registrar. Es independiente de la hora — se
+   puede cerrar y abrir caja las veces que haga falta en un día. Al **cerrar turno**:
+   - se envía un correo con el informe de todo lo registrado desde la apertura (a `EMAIL_DESTINO` en
+     `config.py`, de momento `robertorojasfrouchtman@gmail.com`);
+   - los movimientos de tipo **Errores** de ese turno se BORRAN por completo (no quedan en Informes);
+   - el resto (merma, reciclaje, autoconsumo) queda guardado como siempre.
+   Mientras el turno está cerrado no se pueden registrar tickets, hay que pulsar "Abrir turno" primero.
+   El total de Errores acumulado en el turno actual se ve en la burbuja junto al estado del turno.
+4. **Empleadas** (solo Cristina): da de alta aquí a las dependientas — en cuanto exista una, aparece como
+   botón de acceso directo en la pantalla de login.
+5. **Informes** (solo Cristina): totales por tipo, producto, empleada y turno en un rango de fechas, con
+   exportación a CSV para pasarlo a la gestoría si hace falta.
+
+## Correo al cerrar turno
+
+El envío usa SMTP y está SIN CONFIGURAR por defecto (`SMTP_USER`/`SMTP_PASSWORD` vacíos en `config.py`):
+si cierras un turno así, la caja se cierra y los errores se borran igualmente, pero no sale el correo
+(se avisa por pantalla). Para activarlo:
+
+1. Necesitas una cuenta de correo que haga de remitente (puede ser una cuenta nueva tipo
+   `panaderia.cristina@gmail.com`, no hace falta que sea la personal de nadie).
+2. Con Gmail hay que activar la verificación en dos pasos y crear una "contraseña de aplicación" en
+   https://myaccount.google.com/apppasswords (la contraseña normal de la cuenta no sirve para esto).
+3. Rellena en `config.py`: `SMTP_USER` (el correo remitente) y `SMTP_PASSWORD` (la contraseña de
+   aplicación, no la normal). `EMAIL_DESTINO` es a quién le llega el informe.
+
+## Datos
+
+Todo se guarda en `data/app.db` (SQLite), en esta misma carpeta. Cópiala si quieres hacer una copia de
+seguridad.
+
+## Pendiente para producción
+
+- Desplegar en un servidor propio o VPS con este proceso corriendo detrás de un proxy (o usar `waitress`/`gunicorn`).
+- Cambiar `APP_PASSWORD` y `SECRET_KEY` en `config.py` (o por variables de entorno).
+- Configurar HTTPS si se va a acceder desde fuera de la red local.

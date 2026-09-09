@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Empleadas{% endblock %}
+{% block content %}
+<h1>Empleadas</h1>
+<p class="ayuda">Añade aquí a las dependientas del negocio para poder ver el desglose de merma, reciclaje, autoconsumo y errores por persona y turno en Informes.</p>
+
+<details class="card" id="nueva-empleada">
+  <summary>Añadir empleada</summary>
+  <form method="post" action="{{ url_for('empleadas_nuevo') }}" class="fila-form-simple">
+    <input type="text" name="nombre" placeholder="Nombre" required>
+    <button type="submit">Añadir</button>
+  </form>
+</details>
+
+<div class="tabla-scroll">
+<table class="tabla">
+  <thead>
+    <tr><th>Nombre</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for e in empleadas %}
+    <tr>
+      <td>
+        <form method="post" action="{{ url_for('empleadas_editar', empleada_id=e.id) }}" class="fila-inline">
+          <input type="text" name="nombre" value="{{ e.nombre }}" required>
+          <button type="submit" class="link">guardar</button>
+        </form>
+      </td>
+      <td class="fila-acciones">
+        <form method="post" action="{{ url_for('empleadas_eliminar', empleada_id=e.id) }}" onsubmit="return confirm('¿Archivar esta empleada?');">
+          <button type="submit" class="link-danger">archivar</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="2" class="empty">No hay empleadas todavía</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  if (window.location.hash === "#nueva-empleada") {
+    document.getElementById("nueva-empleada").open = true;
+  }
+</script>
+{% endblock %}

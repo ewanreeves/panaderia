@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Importar productos{% endblock %}
+{% block content %}
+<h1>Importar productos desde GOTPV</h1>
+<p class="ayuda">
+  Desde el back office de GOTPV, exporta el listado de productos/carta a Excel o CSV y súbelo aquí.
+  En el siguiente paso podrás indicar qué columna es cada cosa (nombre, precio, etc.).
+</p>
+<form method="post" enctype="multipart/form-data" class="card">
+  <input type="file" name="fichero" accept=".csv,.xlsx,.xls" required>
+  <button type="submit">Continuar</button>
+</form>
+<p><a class="boton-secundario" href="{{ url_for('productos') }}">Volver a productos</a></p>
+{% endblock %}

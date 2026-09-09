@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Informes{% endblock %}
+{% block content %}
+<h1>Informes</h1>
+
+<form method="get" class="filtros">
+  <label>Desde <input type="date" name="desde" value="{{ fecha_desde }}"></label>
+  <label>Hasta <input type="date" name="hasta" value="{{ fecha_hasta }}"></label>
+  <label>Tipo
+    <select name="tipo">
+      <option value="">Todos</option>
+      {% for t, label in tipo_labels.items() %}
+      <option value="{{ t }}" {{ 'selected' if tipo_actual == t }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% if empleadas %}
+  <label>Empleada
+    <select name="empleada">
+      <option value="">Todas</option>
+      {% for e in empleadas %}
+      <option value="{{ e.id }}" {{ 'selected' if empleada_actual == e.id|string }}>{{ e.nombre }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% endif %}
+  <button type="submit">Filtrar</button>
+  <a class="boton-secundario" href="{{ url_for('informes_exportar', desde=fecha_desde, hasta=fecha_hasta, tipo=tipo_actual, empleada=empleada_actual) }}">Exportar CSV</a>
+</form>
+
+{% if total_general > 0 %}
+<div class="barra-resumen">
+  {% for t, label in tipo_labels.items() %}
+  {% set pct = (totales_tipo[t].total / total_general * 100) if total_general else 0 %}
+  {% if pct > 0 %}
+  <span class="barra-{{ t }}" style="width: {{ pct }}%" title="{{ label }}: {{ '%.2f'|format(totales_tipo[t].total) }} €"></span>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="totales">
+  {% for t, label in tipo_labels.items() %}
+  <div class="tarjeta-total tarjeta-{{ t }}">
+    <div class="tarjeta-label">{{ tipo_icons[t] }} {{ label }}</div>
+    <div class="tarjeta-valor">{{ '%.2f'|format(totales_tipo[t].total) }} €</div>
+    <div class="tarjeta-sub">{{ totales_tipo[t].n }} movimientos</div>
+  </div>
+  {% endfor %}
+  <div class="tarjeta-total tarjeta-general">
+    <div class="tarjeta-label">Total</div>
+    <div class="tarjeta-valor">{{ '%.2f'|format(total_general) }} €</div>
+  </div>
+</div>
+
+<h2>Por producto</h2>
+<table class="tabla">
+  <thead><tr><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Nº</th><th>Valor</th></tr></thead>
+  <tbody>
+    {% for p in por_producto %}
+    <tr>
+      <td>{{ p.producto_nombre }}</td>
+      <td><span class="badge badge-{{ p.tipo }}">{{ tipo_icons[p.tipo] }} {{ tipo_labels[p.tipo] }}</span></td>
+      <td>{{ p.cantidad }}</td>
+      <td>{{ p.n }}</td>
+      <td>{{ '%.2f'|format(p.total) }} €</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="empty">Sin movimientos en este periodo</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if empleadas %}
+<h2>Por empleada</h2>
+<table class="tabla">
+  <thead><tr><th>Empleada</th><th>Tipo</th><th>Cantidad</th><th>Nº</th><th>Valor</th></tr></thead>
+  <tbody>
+    {% for e in por_empleada %}
+    <tr>
+      <td>👤 {{ e.empleada_nombre }}</td>
+      <td><span class="badge badge-{{ e.tipo }}">{{ tipo_icons[e.tipo] }} {{ tipo_labels[e.tipo] }}</span></td>
+      <td>{{ e.cantidad }}</td>
+      <td>{{ e.n }}</td>
+      <td>{{ '%.2f'|format(e.total) }} €</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="empty">Sin movimientos en este periodo</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Por turno</h2>
+<table class="tabla">
+  <thead><tr><th>Turno</th><th>Tipo</th><th>Cantidad</th><th>Nº</th><th>Valor</th></tr></thead>
+  <tbody>
+    {% for t in por_turno %}
+    <tr>
+      <td>{{ turno_labels.get(t.turno, t.turno) }}</td>
+      <td><span class="badge badge-{{ t.tipo }}">{{ tipo_icons[t.tipo] }} {{ tipo_labels[t.tipo] }}</span></td>
+      <td>{{ t.cantidad }}</td>
+      <td>{{ t.n }}</td>
+      <td>{{ '%.2f'|format(t.total) }} €</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="empty">Sin movimientos en este periodo</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<h2>Detalle</h2>
+<div class="tabla-scroll">
+<table class="tabla">
+  <thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Cant.</th><th>Valor</th><th>Empleada</th><th>Turno</th><th>Motivo</th></tr></thead>
+  <tbody>
+    {% for m in movimientos %}
+    <tr>
+      <td>{{ m.fecha }}</td>
+      <td><span class="badge badge-{{ m.tipo }}">{{ tipo_icons[m.tipo] }} {{ tipo_labels[m.tipo] }}</span></td>
+      <td>{{ m.producto_nombre }}</td>
+      <td>{{ m.cantidad }}</td>
+      <td>{{ '%.2f'|format(m.valor_total) ~ ' €' if m.valor_total is not none else '—' }}</td>
+      <td>{{ m.empleada_nombre or '' }}</td>
+      <td>{{ turno_labels.get(m.turno, m.turno or '') }}</td>
+      <td>{{ m.motivo or '' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="empty">Sin movimientos en este periodo</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

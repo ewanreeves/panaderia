@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Acceder{% endblock %}
+{% block content %}
+<div class="login-box login-box-ancho">
+  <span class="brand-mark">🥐</span>
+  <h1>Gestión interna</h1>
+  <p class="login-sub">panadería · cafetería</p>
+
+  {% if empleadas %}
+  <p class="login-quien">¿Quién eres?</p>
+  <div class="login-empleadas">
+    {% for e in empleadas %}
+    <form method="post" action="{{ url_for('login_empleada', empleada_id=e.id) }}">
+      <button type="submit" class="login-empleada-btn">
+        <span class="login-empleada-avatar">👩‍🍳</span>
+        {{ e.nombre }}
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <details class="login-admin">
+    <summary>Acceso administración</summary>
+    <form method="post">
+      <label>Contraseña de {{ admin_nombre }}
+        <input type="password" name="password" required>
+      </label>
+      <button type="submit">Entrar como {{ admin_nombre }}</button>
+    </form>
+  </details>
+</div>
+{% endblock %}

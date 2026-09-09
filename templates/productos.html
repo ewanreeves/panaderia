@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Productos{% endblock %}
+{% block content %}
+<h1>Productos</h1>
+
+<div class="acciones">
+  <a class="boton-secundario" href="{{ url_for('productos_importar') }}">Importar desde GOTPV (CSV/Excel)</a>
+</div>
+
+<details class="card" id="nuevo-producto">
+  <summary>Añadir producto manualmente</summary>
+  <form method="post" action="{{ url_for('productos_nuevo') }}" class="fila-form">
+    <input type="text" name="nombre" placeholder="Nombre" required>
+    <input type="text" name="categoria" placeholder="Categoría">
+    <input type="text" inputmode="decimal" name="precio_venta" placeholder="Precio venta (€)">
+    <input type="text" inputmode="decimal" name="coste" placeholder="Coste (€)">
+    <input type="text" name="unidad" placeholder="Unidad (ud, kg...)" value="ud">
+    <button type="submit">Añadir</button>
+  </form>
+</details>
+
+<div class="tabla-scroll">
+<table class="tabla">
+  <thead>
+    <tr><th>Nombre</th><th>Categoría</th><th>P. venta</th><th>Coste</th><th>Unidad</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for p in productos %}
+    <tr>
+      <td>{{ p.nombre }}</td>
+      <td>{{ p.categoria or '' }}</td>
+      <td>{{ '%.2f'|format(p.precio_venta) ~ ' €' if p.precio_venta is not none else '' }}</td>
+      <td>{{ '%.2f'|format(p.coste) ~ ' €' if p.coste is not none else '' }}</td>
+      <td>{{ p.unidad or '' }}</td>
+      <td class="fila-acciones">
+        <a class="link" href="{{ url_for('productos_editar', producto_id=p.id) }}">editar</a>
+        <form method="post" action="{{ url_for('productos_eliminar', producto_id=p.id) }}" onsubmit="return confirm('¿Archivar este producto?');">
+          <button type="submit" class="link-danger">archivar</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="empty">No hay productos todavía</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  if (window.location.hash === "#nuevo-producto") {
+    document.getElementById("nuevo-producto").open = true;
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Importar productos{% endblock %}
+{% block content %}
+<h1>Importar productos</h1>
+<p class="ayuda">Hemos leído {{ total_filas }} filas. Indica qué columna del fichero corresponde a cada campo.</p>
+
+<form method="post" action="{{ url_for('productos_importar_confirmar') }}" class="card">
+  <input type="hidden" name="nombre_fichero" value="{{ nombre_fichero }}">
+  {% for campo, etiqueta, obligatorio in campos %}
+  <label>{{ etiqueta }}{{ ' *' if obligatorio }}
+    <select name="map_{{ campo }}" {{ 'required' if obligatorio }}>
+      <option value="">— No importar —</option>
+      {% for c in columnas %}
+      <option value="{{ c }}" {{ 'selected' if mapeo.get(campo) == c }}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% endfor %}
+  <button type="submit">Importar {{ total_filas }} productos</button>
+</form>
+
+<h2>Vista previa</h2>
+<div class="tabla-scroll">
+<table class="tabla">
+  <thead>
+    <tr>{% for c in columnas %}<th>{{ c }}</th>{% endfor %}</tr>
+  </thead>
+  <tbody>
+    {% for fila in preview %}
+    <tr>{% for c in columnas %}<td>{{ fila[c] }}</td>{% endfor %}</tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

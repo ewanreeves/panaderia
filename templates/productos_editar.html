@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Editar producto{% endblock %}
+{% block content %}
+<h1>Editar producto</h1>
+<form method="post" class="card">
+  <label>Nombre
+    <input type="text" name="nombre" value="{{ p.nombre }}" required>
+  </label>
+  <label>Categoría
+    <input type="text" name="categoria" value="{{ p.categoria or '' }}">
+  </label>
+  <div class="fila">
+    <label>Precio de venta (€)
+      <input type="text" inputmode="decimal" name="precio_venta" value="{{ p.precio_venta if p.precio_venta is not none else '' }}">
+    </label>
+    <label>Coste (€)
+      <input type="text" inputmode="decimal" name="coste" value="{{ p.coste if p.coste is not none else '' }}">
+    </label>
+  </div>
+  <label>Unidad
+    <input type="text" name="unidad" value="{{ p.unidad or 'ud' }}">
+  </label>
+  <button type="submit">Guardar</button>
+  <a class="boton-secundario" href="{{ url_for('productos') }}">Cancelar</a>
+</form>
+{% endblock %}

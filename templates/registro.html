@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Registrar{% endblock %}
+{% block content %}
+<h1 class="no-print">Registrar movimiento</h1>
+
+<div class="card turno-card no-print">
+  <div class="turno-estado">
+    {% if turno_abierto %}
+      <span class="turno-punto turno-punto-abierto"></span> Turno abierto desde las {{ turno_abierto.abierto_en[11:16] }}
+    {% else %}
+      <span class="turno-punto turno-punto-cerrado"></span> Turno cerrado
+    {% endif %}
+  </div>
+  <div class="burbuja-errores" title="Total acumulado en Errores en este turno">
+    <span class="icon">🗯️</span>
+    <span>{{ '%.2f'|format(total_errores_turno) }} €</span>
+  </div>
+  <div class="turno-acciones">
+    {% if turno_abierto %}
+    <form method="post" action="{{ url_for('turno_cerrar') }}"
+      onsubmit="return confirm('¿Cerrar el turno? Se enviará el informe por correo y se borrarán los movimientos de Errores registrados en este turno.');">
+      <button type="submit" class="btn-cierre">🔒 Cerrar turno</button>
+    </form>
+    {% else %}
+    <form method="post" action="{{ url_for('turno_abrir') }}">
+      <button type="submit" class="btn-abrir">🔓 Abrir turno</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if not turno_abierto %}
+<div class="card turno-cerrado-panel no-print">
+  <span class="emoji-grande">🔒</span>
+  <h2>El turno está cerrado</h2>
+  <p>Pulsa "Abrir turno" arriba para poder registrar merma, reciclaje, autoconsumo o errores.</p>
+</div>
+{% elif not categorias %}
+  <p class="empty">Todavía no hay productos. <a href="{{ url_for('productos') }}">Añade productos</a> antes de registrar movimientos.</p>
+{% else %}
+<div class="tpv no-print">
+  <div class="tpv-productos">
+    <div class="categoria-tabs">
+      {% for cat in categorias %}
+      <button type="button" class="tab-cat {{ 'active' if loop.first }}" data-cat-tab="{{ cat }}">
+        <span class="emoji">{{ categoria_iconos.get(cat, categoria_icono_defecto) }}</span> {{ cat }}
+      </button>
+      {% endfor %}
+    </div>
+    {% for cat in categorias %}
+    <div class="grid-productos" data-cat-panel="{{ cat }}" {{ '' if loop.first else 'hidden' }}>
+      {% for p in por_categoria[cat] %}
+      <button type="button" class="tile-producto"
+        data-id="{{ p.id }}" data-nombre="{{ p.nombre }}"
+        data-precio="{{ '%.2f'|format(p.precio_venta) if p.precio_venta is not none else '' }}"
+        data-emoji="{{ p.icono }}">
+        <span class="tile-icono">{{ p.icono }}</span>
+        <span class="tile-nombre">{{ p.nombre }}</span>
+        <span class="tile-precio">{{ '%.2f'|format(p.precio_venta) ~ ' €' if p.precio_venta is not none else '' }}</span>
+      </button>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+    <div class="separador"><span>Acciones rápidas</span></div>
+    <div class="grid-acciones">
+      <button type="button" class="accion-tile" id="btn-imprimir">
+        <span class="accion-icono accion-icono-a">🖨️</span> Imprimir resumen
+      </button>
+      {% if rol == 'admin' %}
+      <a class="accion-tile" href="{{ url_for('informes') }}">
+        <span class="accion-icono accion-icono-b">📊</span> Ver informes
+      </a>
+      <a class="accion-tile" href="{{ url_for('productos') }}">
+        <span class="accion-icono accion-icono-c">📦</span> Productos
+      </a>
+      <a class="accion-tile" href="{{ url_for('informes_exportar', desde=hoy, hasta=hoy) }}">
+        <span class="accion-icono accion-icono-d">⬇️</span> Exportar hoy
+      </a>
+      <a class="accion-tile" href="{{ url_for('productos') }}#nuevo-producto">
+        <span class="accion-icono accion-icono-b">➕</span> Producto nuevo
+      </a>
+      {% endif %}
+      <button type="button" class="accion-tile" onclick="location.reload()">
+        <span class="accion-icono accion-icono-d">🔄</span> Recargar carta
+      </button>
+    </div>
+  </div>
+
+  <form method="post" class="ticket" id="ticket-form">
+    <div class="ticket-header">
+      <h2>Ticket</h2>
+      <button type="button" class="link-danger" id="btn-vaciar" hidden>vaciar</button>
+    </div>
+    <input type="hidden" name="tipo" id="f-tipo">
+    <input type="hidden" name="lineas" id="f-lineas">
+
+    <div class="carrito" id="carrito">
+      <p class="placeholder" id="carrito-vacio">Toca productos de la carta para añadirlos al ticket…</p>
+    </div>
+    <div class="carrito-subtotal" id="carrito-subtotal" hidden>
+      <span>Subtotal</span>
+      <span id="carrito-subtotal-valor">0.00 €</span>
+    </div>
+
+    <div class="tipo-botones">
+      {% for t in tipos %}
+      <button type="button" class="btn-tipo btn-tipo-{{ t }}" data-tipo-btn="{{ t }}">
+        <span class="icon">{{ tipo_icons[t] }}</span>
+        <span>{{ tipo_labels[t] }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    {% if rol == 'empleada' %}
+    <p class="ayuda campo-pequeno">Registrando como <strong>{{ session.get('nombre') }}</strong></p>
+    {% else %}
+    <label class="campo-pequeno">Quién registra
+      <select name="empleada_id" id="f-empleada">
+        <option value="admin" selected>{{ admin_nombre }} (tú)</option>
+        {% for e in empleadas %}
+        <option value="{{ e.id }}">{{ e.nombre }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% endif %}
+
+    <label class="campo-pequeno">Turno</label>
+    <div class="turno-botones">
+      {% for t in turnos %}
+      <button type="button" class="btn-turno" data-turno-btn="{{ t }}">{{ turno_labels[t] }}</button>
+      {% endfor %}
+    </div>
+    <input type="hidden" name="turno" id="f-turno">
+
+    <label class="campo-pequeno">Fecha
+      <input type="date" name="fecha" value="{{ hoy }}">
+    </label>
+    <label class="campo-pequeno">Motivo (opcional, para todo el ticket)
+      <input type="text" name="motivo" placeholder="ej. caducado, desayuno personal...">
+    </label>
+
+    <p class="ticket-error" id="ticket-error" hidden></p>
+    <button type="submit" class="btn-registrar" id="btn-registrar">Registrar ticket</button>
+  </form>
+</div>
+{% endif %}
+
+{% if tickets_hoy %}
+<div class="hoja-impresion">
+  <h2 class="titulo-impresion">Resumen del día — {{ hoy }}</h2>
+  <h2 class="no-print">Hoy</h2>
+  {% for ticket in tickets_hoy %}
+  <div class="recibo">
+    <div class="recibo-cabecera">
+      <span class="badge badge-{{ ticket.tipo }}">{{ tipo_icons[ticket.tipo] }} {{ tipo_labels[ticket.tipo] }}</span>
+      {% if ticket.empleada_nombre %}<span class="badge badge-neutro">👤 {{ ticket.empleada_nombre }}</span>{% endif %}
+      {% if ticket.turno %}<span class="badge badge-neutro">{{ turno_labels.get(ticket.turno, ticket.turno) }}</span>{% endif %}
+      {% if ticket.motivo %}<span class="recibo-motivo">{{ ticket.motivo }}</span>{% endif %}
+      <form method="post" class="no-print"
+        action="{{ ticket.lote and url_for('registro_lote_eliminar', lote=ticket.lote) or url_for('registro_eliminar', movimiento_id=ticket.movimiento_id) }}"
+        onsubmit="return confirm('¿Eliminar este ticket?');">
+        <button type="submit" class="link-danger">eliminar ticket</button>
+      </form>
+    </div>
+    {% for m in ticket.lineas %}
+    <div class="recibo-linea">
+      <span class="recibo-producto">{{ m.cantidad }} × {{ m.producto_nombre }}</span>
+      <span class="recibo-valor">{{ '%.2f'|format(m.valor_total) ~ ' €' if m.valor_total is not none else '—' }}</span>
+    </div>
+    {% endfor %}
+    {% if ticket.lineas|length > 1 %}
+    <div class="recibo-linea recibo-linea-subtotal">
+      <span class="recibo-producto">Subtotal ticket</span>
+      <span class="recibo-valor">{{ '%.2f'|format(ticket.total) }} €</span>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  <div class="recibo-total-dia">
+    <span>Total de hoy</span>
+    <span>{{ '%.2f'|format(total_hoy) }} €</span>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='registro.js') }}"></script>
+{% endblock %}
