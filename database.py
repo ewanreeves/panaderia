@@ -180,18 +180,21 @@ def set_producto_activo(producto_id, activo):
     conn.close()
 
 
-def find_producto_by_nombre(nombre):
+def find_producto_by_nombre(nombre, solo_activos=False):
     conn = get_db()
-    row = conn.execute(
-        "SELECT * FROM productos WHERE nombre = ? COLLATE NOCASE", (nombre.strip(),)
-    ).fetchone()
+    q = "SELECT * FROM productos WHERE nombre = ? COLLATE NOCASE"
+    if solo_activos:
+        q += " AND activo = 1"
+    row = conn.execute(q, (nombre.strip(),)).fetchone()
     conn.close()
     return row
 
 
 def upsert_producto_from_import(nombre, categoria=None, precio_venta=None, coste=None, unidad="ud", foto=None):
-    """Inserta el producto si no existe (por nombre); si existe, actualiza los campos no vacíos."""
-    existing = find_producto_by_nombre(nombre)
+    """Inserta el producto si no existe activo (por nombre); si existe, actualiza los campos no vacíos.
+    Solo busca entre productos activos: un producto archivado con el mismo nombre no se reutiliza ni
+    se reactiva por sorpresa — se crea uno nuevo."""
+    existing = find_producto_by_nombre(nombre, solo_activos=True)
     if existing:
         conn = get_db()
         conn.execute(

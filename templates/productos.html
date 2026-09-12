@@ -4,7 +4,8 @@
 <h1>Productos</h1>
 
 <div class="acciones">
-  <a class="boton-secundario" href="{{ url_for('productos_importar') }}">Importar desde GOTPV (CSV/Excel)</a>
+  <a class="boton-secundario" href="{{ url_for('productos_importar_gotpv') }}">📦 Actualizar desde backup GOTPV (.sql)</a>
+  <a class="boton-secundario" href="{{ url_for('productos_importar') }}">Importar desde CSV/Excel</a>
 </div>
 
 <details class="card" id="nuevo-producto">

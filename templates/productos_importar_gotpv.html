@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Actualizar desde GOTPV{% endblock %}
+{% block content %}
+<h1>Actualizar desde el backup de GOTPV</h1>
+<p class="ayuda">
+  Sube aquí el fichero de copia de seguridad de GOTPV (un <code>.sql</code>, el volcado completo de su
+  base de datos). La app lee solo los artículos y las categorías — precio, coste, categoría y foto de
+  cada producto — y actualiza el catálogo. No toca ni guarda nada de clientes, empleados o ventas.
+</p>
+<p class="ayuda">
+  Los productos que ya existan (mismo nombre) se actualizan; los que no existan se crean. El fichero
+  puede pesar bastante (100&nbsp;MB o más) — puede tardar unos segundos en procesarse.
+</p>
+<form method="post" enctype="multipart/form-data" class="card">
+  <input type="file" name="fichero" accept=".sql" required>
+  <button type="submit">Actualizar catálogo</button>
+</form>
+<p><a class="boton-secundario" href="{{ url_for('productos') }}">Volver a productos</a></p>
+{% endblock %}

@@ -2,6 +2,7 @@ import io
 import csv
 import json
 import secrets
+import hashlib
 from datetime import date, datetime
 from functools import wraps
 from pathlib import Path
@@ -9,15 +10,18 @@ from pathlib import Path
 from flask import (
     Flask, render_template, request, redirect, url_for, session, flash, send_file, abort
 )
+from PIL import Image
 
 import config
 import database as db
 import importador
 import correo
+import gotpv_import
 from iconos import icono_para_producto
 
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
+app.config["MAX_CONTENT_LENGTH"] = 400 * 1024 * 1024  # backups de GOTPV pueden pesar varios cientos de MB
 
 UPLOAD_DIR = Path(__file__).parent / "data" / "tmp"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -224,6 +228,70 @@ def productos_importar_confirmar():
     origen.unlink(missing_ok=True)
     flash(f"Importación completa: {nuevos} productos nuevos, {actualizados} actualizados, {omitidos} filas omitidas")
     return redirect(url_for("productos"))
+
+
+@app.route("/productos/importar-gotpv", methods=["GET", "POST"])
+@admin_required
+def productos_importar_gotpv():
+    if request.method == "POST":
+        fichero = request.files.get("fichero")
+        if not fichero or not fichero.filename:
+            flash("Selecciona el fichero de backup (.sql) de GOTPV")
+            return redirect(url_for("productos_importar_gotpv"))
+
+        destino = UPLOAD_DIR / "gotpv_backup.sql"
+        fichero.save(destino)
+        try:
+            data = destino.read_bytes()
+            productos = gotpv_import.extraer_productos(data)
+        except gotpv_import.ErrorImportacionGOTPV as e:
+            flash(f"No se ha podido leer el backup: {e}")
+            return redirect(url_for("productos_importar_gotpv"))
+        finally:
+            destino.unlink(missing_ok=True)
+
+        if not productos:
+            flash("No se ha encontrado ningún artículo en ese backup")
+            return redirect(url_for("productos_importar_gotpv"))
+
+        fotos_dir = Path(__file__).parent / "static" / "productos_fotos"
+        fotos_dir.mkdir(parents=True, exist_ok=True)
+
+        nuevos, actualizados, fotos_nuevas = 0, 0, 0
+        for p in productos:
+            foto_nombre = None
+            if p["imagen"]:
+                h = hashlib.sha1(p["imagen"]).hexdigest()[:16]
+                foto_nombre = f"{h}.png"
+                ruta_foto = fotos_dir / foto_nombre
+                if not ruta_foto.exists():
+                    try:
+                        with Image.open(io.BytesIO(p["imagen"])) as im:
+                            im.convert("RGB").save(ruta_foto, "PNG", optimize=True)
+                        fotos_nuevas += 1
+                    except Exception:
+                        foto_nombre = None
+
+            _, creado = db.upsert_producto_from_import(
+                nombre=p["nombre"],
+                categoria=p["categoria"],
+                precio_venta=p["pvp"],
+                coste=p["coste"],
+                unidad=p["medida"],
+                foto=foto_nombre,
+            )
+            if creado:
+                nuevos += 1
+            else:
+                actualizados += 1
+
+        flash(
+            f"Backup de GOTPV importado: {nuevos} productos nuevos, {actualizados} actualizados, "
+            f"{fotos_nuevas} fotos nuevas"
+        )
+        return redirect(url_for("productos"))
+
+    return render_template("productos_importar_gotpv.html")
 
 
 # ---------- empleadas ----------
