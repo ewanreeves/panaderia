@@ -22,11 +22,12 @@
 <div class="tabla-scroll">
 <table class="tabla">
   <thead>
-    <tr><th>Nombre</th><th>Categoría</th><th>P. venta</th><th>Coste</th><th>Unidad</th><th></th></tr>
+    <tr><th></th><th>Nombre</th><th>Categoría</th><th>P. venta</th><th>Coste</th><th>Unidad</th><th></th></tr>
   </thead>
   <tbody>
     {% for p in productos %}
     <tr>
+      <td class="foto-celda">{% if p.foto %}<img class="foto-mini" src="{{ url_for('static', filename='productos_fotos/' ~ p.foto) }}" alt="">{% endif %}</td>
       <td>{{ p.nombre }}</td>
       <td>{{ p.categoria or '' }}</td>
       <td>{{ '%.2f'|format(p.precio_venta) ~ ' €' if p.precio_venta is not none else '' }}</td>
@@ -40,7 +41,7 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="6" class="empty">No hay productos todavía</td></tr>
+    <tr><td colspan="7" class="empty">No hay productos todavía</td></tr>
     {% endfor %}
   </tbody>
 </table>

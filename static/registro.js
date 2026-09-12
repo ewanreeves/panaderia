@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
+  if (!document.getElementById("ticket-form")) {
+    return; // turno cerrado o sin productos: no hay ticket que gestionar
+  }
   const tabs = document.querySelectorAll(".tab-cat");
   const paneles = document.querySelectorAll(".grid-productos");
   const tiles = document.querySelectorAll(".tile-producto");

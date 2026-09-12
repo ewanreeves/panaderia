@@ -21,11 +21,19 @@ TIPO_ICONOS = {
 }
 
 CATEGORIA_ICONOS = {
-    "Panadería": "🍞",
+    "Bebidas": "🥤",
+    "Cafés e infusiones": "☕",
+    "Licores y carajillos": "🥃",
+    "Bocadillos": "🥪",
+    "Suplementos": "➕",
+    "Lotería": "🎟️",
     "Bollería": "🥐",
+    "Pan": "🍞",
+    "Diadas": "🎉",
+    "Gominolas y dulces": "🍬",
     "Pastelería": "🍰",
-    "Salados": "🥪",
-    "Bebidas": "☕",
+    "Menú": "🍽️",
+    "Stock": "📦",
 }
 CATEGORIA_ICONO_DEFECTO = "🧺"
 
@@ -101,6 +109,9 @@ def init_db():
         conn.execute("ALTER TABLE movimientos ADD COLUMN empleada_nombre TEXT")
     if "turno" not in columnas:
         conn.execute("ALTER TABLE movimientos ADD COLUMN turno TEXT")
+    columnas_prod = [r["name"] for r in conn.execute("PRAGMA table_info(productos)").fetchall()]
+    if "foto" not in columnas_prod:
+        conn.execute("ALTER TABLE productos ADD COLUMN foto TEXT")
     # "Invitación" se eliminó como tipo — los movimientos antiguos pasan a "errores".
     conn.execute("UPDATE movimientos SET tipo='errores' WHERE tipo='invitacion'")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_movimientos_lote ON movimientos(lote)")
@@ -138,11 +149,11 @@ def get_producto(producto_id):
     return row
 
 
-def insert_producto(nombre, categoria=None, precio_venta=None, coste=None, unidad="ud"):
+def insert_producto(nombre, categoria=None, precio_venta=None, coste=None, unidad="ud", foto=None):
     conn = get_db()
     cur = conn.execute(
-        "INSERT INTO productos (nombre, categoria, precio_venta, coste, unidad) VALUES (?, ?, ?, ?, ?)",
-        (nombre.strip(), categoria, precio_venta, coste, unidad or "ud"),
+        "INSERT INTO productos (nombre, categoria, precio_venta, coste, unidad, foto) VALUES (?, ?, ?, ?, ?, ?)",
+        (nombre.strip(), categoria, precio_venta, coste, unidad or "ud", foto),
     )
     conn.commit()
     new_id = cur.lastrowid
@@ -150,12 +161,14 @@ def insert_producto(nombre, categoria=None, precio_venta=None, coste=None, unida
     return new_id
 
 
-def update_producto(producto_id, nombre, categoria, precio_venta, coste, unidad):
+def update_producto(producto_id, nombre, categoria, precio_venta, coste, unidad, foto=None):
     conn = get_db()
     conn.execute(
         "UPDATE productos SET nombre=?, categoria=?, precio_venta=?, coste=?, unidad=? WHERE id=?",
         (nombre.strip(), categoria, precio_venta, coste, unidad or "ud", producto_id),
     )
+    if foto is not None:
+        conn.execute("UPDATE productos SET foto=? WHERE id=?", (foto, producto_id))
     conn.commit()
     conn.close()
 
@@ -176,7 +189,7 @@ def find_producto_by_nombre(nombre):
     return row
 
 
-def upsert_producto_from_import(nombre, categoria=None, precio_venta=None, coste=None, unidad="ud"):
+def upsert_producto_from_import(nombre, categoria=None, precio_venta=None, coste=None, unidad="ud", foto=None):
     """Inserta el producto si no existe (por nombre); si existe, actualiza los campos no vacíos."""
     existing = find_producto_by_nombre(nombre)
     if existing:
@@ -186,15 +199,16 @@ def upsert_producto_from_import(nombre, categoria=None, precio_venta=None, coste
                 categoria = COALESCE(?, categoria),
                 precio_venta = COALESCE(?, precio_venta),
                 coste = COALESCE(?, coste),
-                unidad = COALESCE(?, unidad)
+                unidad = COALESCE(?, unidad),
+                foto = COALESCE(?, foto)
                WHERE id = ?""",
-            (categoria, precio_venta, coste, unidad, existing["id"]),
+            (categoria, precio_venta, coste, unidad, foto, existing["id"]),
         )
         conn.commit()
         conn.close()
         return existing["id"], False
     else:
-        new_id = insert_producto(nombre, categoria, precio_venta, coste, unidad or "ud")
+        new_id = insert_producto(nombre, categoria, precio_venta, coste, unidad or "ud", foto)
         return new_id, True
 
 

@@ -54,7 +54,11 @@
         data-id="{{ p.id }}" data-nombre="{{ p.nombre }}"
         data-precio="{{ '%.2f'|format(p.precio_venta) if p.precio_venta is not none else '' }}"
         data-emoji="{{ p.icono }}">
+        {% if p.foto %}
+        <span class="tile-icono tile-icono-foto"><img src="{{ url_for('static', filename='productos_fotos/' ~ p.foto) }}" alt=""></span>
+        {% else %}
         <span class="tile-icono">{{ p.icono }}</span>
+        {% endif %}
         <span class="tile-nombre">{{ p.nombre }}</span>
         <span class="tile-precio">{{ '%.2f'|format(p.precio_venta) ~ ' €' if p.precio_venta is not none else '' }}</span>
       </button>

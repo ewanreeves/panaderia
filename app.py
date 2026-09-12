@@ -363,6 +363,7 @@ def registro():
             "id": p["id"],
             "nombre": p["nombre"],
             "precio_venta": p["precio_venta"],
+            "foto": p["foto"],
             "icono": icono_para_producto(p["nombre"], cat, db.CATEGORIA_ICONOS, db.CATEGORIA_ICONO_DEFECTO),
         })
     hoy = date.today().isoformat()

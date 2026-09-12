@@ -16,10 +16,14 @@ ICONOS_PRODUCTO = [
     (["té", " te", "infusion", "infusión"], "🍵"),
     (["zumo", "naranja", "jugo"], "🧃"),
     (["agua"], "💧"),
-    (["cerveza"], "🍺"),
-    (["vino"], "🍷"),
+    (["cerveza", "caña", "cañ", "clara", "jarra"], "🍺"),
+    (["vino", "cava"], "🍷"),
     (["ensalada"], "🥗"),
-    (["huevo", "tortilla"], "🍳"),
+    (["huevo", "tortilla", "truita"], "🍳"),
+    (["pernil", "llonganissa", "jamon", "jamón", "bacon", "formatge", "queso", "tonyina", "atun", "atún"], "🥪"),
+    (["refresco", "cola", "fanta", "tonica", "tónica"], "🥤"),
+    (["gelat", "helado"], "🍨"),
+    (["patata", "papas"], "🍟"),
 ]
 
 
