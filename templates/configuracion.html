@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Configuración{% endblock %}
+{% block content %}
+<h1>Configuración</h1>
+
+<form method="post" class="card">
+  <h2>Correo de los cierres de turno</h2>
+  <label>¿A qué correo quieres que lleguen los informes de cierre?
+    <input type="text" name="email_destino" value="{{ email_destino }}" placeholder="tucorreo@gmail.com">
+  </label>
+  <p class="ayuda">Puedes poner varios separados por comas (por ejemplo, el tuyo y el de la gestoría).</p>
+
+  <h2>Cuenta que envía el correo</h2>
+  <p class="ayuda">
+    No hace falta crear una cuenta nueva — puedes usar tu propio Gmail. Google no deja que apps como
+    esta usen tu contraseña normal; hay que generar una <b>contraseña de aplicación</b>, que es un
+    código de 16 letras que solo sirve para esto y que puedes revocar cuando quieras sin afectar a tu
+    cuenta. Pasos:
+  </p>
+  <ol class="ayuda pasos">
+    <li>Entra en tu cuenta de Google → <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">Seguridad</a> y activa la <b>verificación en dos pasos</b> si no la tienes ya.</li>
+    <li>Ve a <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>.</li>
+    <li>Crea una contraseña de aplicación (ponle un nombre como "Gestión interna") y copia el código de 16 letras.</li>
+    <li>Pégalo aquí abajo, en "Contraseña de aplicación" — no tu contraseña normal de Gmail.</li>
+  </ol>
+
+  <label>Tu correo de Gmail (el que envía)
+    <input type="text" name="smtp_user" value="{{ smtp_user }}" placeholder="tucorreo@gmail.com">
+  </label>
+  <label>Contraseña de aplicación
+    <input type="password" name="smtp_password" placeholder="{{ 'ya configurada — déjalo en blanco para no cambiarla' if smtp_password_configurada else 'pega aquí el código de 16 letras' }}" autocomplete="new-password">
+  </label>
+
+  <button type="submit">Guardar</button>
+</form>
+{% endblock %}

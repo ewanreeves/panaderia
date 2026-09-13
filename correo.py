@@ -5,6 +5,17 @@ import config
 import database as db
 
 
+def ajustes_smtp():
+    """Los ajustes configurados desde la app (tabla configuracion) mandan sobre config.py."""
+    return {
+        "host": db.get_config("smtp_host", config.SMTP_HOST),
+        "port": int(db.get_config("smtp_port", config.SMTP_PORT)),
+        "user": db.get_config("smtp_user", config.SMTP_USER),
+        "password": db.get_config("smtp_password", config.SMTP_PASSWORD),
+        "destino": db.get_config("email_destino", config.EMAIL_DESTINO),
+    }
+
+
 def construir_informe_html(turno, movimientos, totales_tipo, admin_nombre):
     filas = "".join(
         f"<tr><td>{m['fecha']}</td><td>{db.TIPO_LABELS.get(m['tipo'], m['tipo'])}</td>"
@@ -33,20 +44,25 @@ def construir_informe_html(turno, movimientos, totales_tipo, admin_nombre):
 
 def enviar_informe_turno(turno, movimientos, totales_tipo, admin_nombre):
     """Devuelve (ok, mensaje). No lanza excepción: si falla el envío, el cierre debe continuar igualmente."""
-    if not config.SMTP_USER or not config.SMTP_PASSWORD:
-        return False, "Envío de correo no configurado (faltan SMTP_USER/SMTP_PASSWORD en config.py)"
+    ajustes = ajustes_smtp()
+    if not ajustes["user"] or not ajustes["password"]:
+        return False, "Envío de correo no configurado — ve a Configuración para añadir el remitente"
+    if not ajustes["destino"]:
+        return False, "No hay correo de destino configurado — ve a Configuración"
+
+    destinatarios = [d.strip() for d in ajustes["destino"].split(",") if d.strip()]
 
     html = construir_informe_html(turno, movimientos, totales_tipo, admin_nombre)
     msg = MIMEText(html, "html", "utf-8")
     msg["Subject"] = f"Cierre de turno {turno['cerrado_en']}"
-    msg["From"] = config.SMTP_USER
-    msg["To"] = config.EMAIL_DESTINO
+    msg["From"] = ajustes["user"]
+    msg["To"] = ", ".join(destinatarios)
 
     try:
-        with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=15) as server:
+        with smtplib.SMTP(ajustes["host"], ajustes["port"], timeout=15) as server:
             server.starttls()
-            server.login(config.SMTP_USER, config.SMTP_PASSWORD)
-            server.sendmail(config.SMTP_USER, [config.EMAIL_DESTINO], msg.as_string())
+            server.login(ajustes["user"], ajustes["password"])
+            server.sendmail(ajustes["user"], destinatarios, msg.as_string())
         return True, "Correo enviado"
     except Exception as e:
         return False, f"No se ha podido enviar el correo: {e}"

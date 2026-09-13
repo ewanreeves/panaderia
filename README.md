@@ -54,16 +54,19 @@ y unos días de movimientos de ejemplo. No lo ejecutes sobre datos reales de la 
 
 ## Correo al cerrar turno
 
-El envío usa SMTP y está SIN CONFIGURAR por defecto (`SMTP_USER`/`SMTP_PASSWORD` vacíos en `config.py`):
-si cierras un turno así, la caja se cierra y los errores se borran igualmente, pero no sale el correo
-(se avisa por pantalla). Para activarlo:
+Se configura desde la propia app: **Configuración** (solo Cristina) — ahí se pone a qué correo
+llegan los cierres y la cuenta que los envía. No hace falta crear una cuenta nueva: puede ser el
+Gmail personal o del negocio de Cristina, autenticado con una "contraseña de aplicación" (un código
+de 16 letras que Google genera para que apps externas puedan enviar en su nombre, revocable en
+cualquier momento, sin exponer la contraseña real de la cuenta). La propia pantalla de Configuración
+trae el paso a paso para generarla.
 
-1. Necesitas una cuenta de correo que haga de remitente (puede ser una cuenta nueva tipo
-   `panaderia.cristina@gmail.com`, no hace falta que sea la personal de nadie).
-2. Con Gmail hay que activar la verificación en dos pasos y crear una "contraseña de aplicación" en
-   https://myaccount.google.com/apppasswords (la contraseña normal de la cuenta no sirve para esto).
-3. Rellena en `config.py`: `SMTP_USER` (el correo remitente) y `SMTP_PASSWORD` (la contraseña de
-   aplicación, no la normal). `EMAIL_DESTINO` es a quién le llega el informe.
+Mientras no esté configurado, el cierre de turno funciona igual (se borran los errores, se cierra la
+caja) pero no sale el correo — se avisa por pantalla.
+
+`config.py` sigue teniendo `SMTP_HOST`/`SMTP_PORT`/`EMAIL_DESTINO`/`SMTP_USER`/`SMTP_PASSWORD` como
+valores por defecto (útiles para variables de entorno en un despliegue), pero lo guardado desde
+Configuración manda siempre sobre eso.
 
 ## Actualizar la app en el PC de la clienta
 

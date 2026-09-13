@@ -96,6 +96,11 @@ def init_db():
             email_enviado INTEGER DEFAULT 0
         );
 
+        CREATE TABLE IF NOT EXISTS configuracion (
+            clave TEXT PRIMARY KEY,
+            valor TEXT
+        );
+
         CREATE INDEX IF NOT EXISTS idx_movimientos_fecha ON movimientos(fecha);
         CREATE INDEX IF NOT EXISTS idx_movimientos_tipo ON movimientos(tipo);
         """
@@ -491,5 +496,27 @@ def eliminar_errores_desde(abierto_en, hasta=None):
         q += " AND creado <= ?"
         params.append(hasta)
     conn.execute(q, params)
+    conn.commit()
+    conn.close()
+
+
+# ---------- configuración (ajustable desde la app, sin tocar config.py) ----------
+
+def get_config(clave, defecto=None):
+    conn = get_db()
+    row = conn.execute("SELECT valor FROM configuracion WHERE clave = ?", (clave,)).fetchone()
+    conn.close()
+    if row is None or row["valor"] in (None, ""):
+        return defecto
+    return row["valor"]
+
+
+def set_config(clave, valor):
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO configuracion (clave, valor) VALUES (?, ?) "
+        "ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor",
+        (clave, valor),
+    )
     conn.commit()
     conn.close()

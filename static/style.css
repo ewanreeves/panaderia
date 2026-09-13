@@ -783,6 +783,8 @@ body:has(.login-box) {
 .tarjeta-sub { font-size: 0.76rem; color: var(--muted); }
 
 .ayuda { color: var(--muted); font-size: 0.9rem; }
+.pasos { padding-left: 20px; margin: 10px 0 18px; }
+.pasos li { margin-bottom: 6px; }
 .acciones { margin-bottom: 16px; display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* ---- turno: apertura / cierre de caja ---- */

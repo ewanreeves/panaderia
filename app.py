@@ -614,5 +614,32 @@ def informes_exportar():
     )
 
 
+# ---------- configuración ----------
+
+@app.route("/configuracion", methods=["GET", "POST"])
+@admin_required
+def configuracion():
+    if request.method == "POST":
+        email_destino = request.form.get("email_destino", "").strip()
+        smtp_user = request.form.get("smtp_user", "").strip()
+        smtp_password = request.form.get("smtp_password", "")
+
+        db.set_config("email_destino", email_destino)
+        db.set_config("smtp_user", smtp_user)
+        if smtp_password:
+            db.set_config("smtp_password", smtp_password)
+
+        flash("Configuración guardada")
+        return redirect(url_for("configuracion"))
+
+    ajustes = correo.ajustes_smtp()
+    return render_template(
+        "configuracion.html",
+        email_destino=ajustes["destino"] or "",
+        smtp_user=ajustes["user"] or "",
+        smtp_password_configurada=bool(ajustes["password"]),
+    )
+
+
 if __name__ == "__main__":
     app.run(debug=True, host="127.0.0.1", port=5000)
