@@ -15,7 +15,7 @@
     </select>
   </label>
   {% if empleadas %}
-  <label>Empleada
+  <label>Personal
     <select name="empleada">
       <option value="">Todas</option>
       {% for e in empleadas %}
@@ -72,9 +72,9 @@
 </table>
 
 {% if empleadas %}
-<h2>Por empleada</h2>
+<h2>Por personal</h2>
 <table class="tabla">
-  <thead><tr><th>Empleada</th><th>Tipo</th><th>Cantidad</th><th>Nº</th><th>Valor</th></tr></thead>
+  <thead><tr><th>Personal</th><th>Tipo</th><th>Cantidad</th><th>Nº</th><th>Valor</th></tr></thead>
   <tbody>
     {% for e in por_empleada %}
     <tr>
@@ -112,7 +112,7 @@
 <h2>Detalle</h2>
 <div class="tabla-scroll">
 <table class="tabla">
-  <thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Cant.</th><th>Valor</th><th>Empleada</th><th>Turno</th><th>Motivo</th></tr></thead>
+  <thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Cant.</th><th>Valor</th><th>Personal</th><th>Turno</th><th>Motivo</th></tr></thead>
   <tbody>
     {% for m in movimientos %}
     <tr>

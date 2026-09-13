@@ -16,9 +16,9 @@ venv\Scripts\python.exe app.py
 
 Abre http://127.0.0.1:5000. Hay dos formas de entrar:
 
-- **Empleadas**: un botón por cada empleada dada de alta (sin contraseña) — solo pueden registrar
-  tickets, y en "Hoy" solo ven los suyos. No pueden entrar a Productos, Empleadas ni Informes
-  (si prueban la URL directamente, la app las redirige a Registrar).
+- **Personal**: un botón por cada persona dada de alta (sin contraseña) — solo pueden registrar
+  tickets, y en "Hoy" solo ven los suyos. No pueden entrar a Productos, Personal ni Informes
+  (si prueban la URL directamente, la app les redirige a Registrar).
 - **Administración (Cristina)**: acceso completo con contraseña — por defecto `Panaderia2026`
   (cámbiala en `config.py`, junto con `ADMIN_NOMBRE` si el nombre cambia).
 
@@ -41,16 +41,18 @@ y unos días de movimientos de ejemplo. No lo ejecutes sobre datos reales de la 
    partir del coste/precio del producto.
 3. **Turno (apertura/cierre de caja)**: arriba del todo en Registrar. Es independiente de la hora — se
    puede cerrar y abrir caja las veces que haga falta en un día. Al **cerrar turno**:
-   - se envía un correo con el informe de todo lo registrado desde la apertura (a `EMAIL_DESTINO` en
-     `config.py`, de momento `robertorojasfrouchtman@gmail.com`);
+   - se envía un correo (con un Excel adjunto con todos los movimientos) con el informe de todo lo
+     registrado desde la apertura, al correo configurado en **Configuración**;
    - los movimientos de tipo **Errores** de ese turno se BORRAN por completo (no quedan en Informes);
    - el resto (merma, reciclaje, autoconsumo) queda guardado como siempre.
    Mientras el turno está cerrado no se pueden registrar tickets, hay que pulsar "Abrir turno" primero.
    El total de Errores acumulado en el turno actual se ve en la burbuja junto al estado del turno.
-4. **Empleadas** (solo Cristina): da de alta aquí a las dependientas — en cuanto exista una, aparece como
+4. **Personal** (solo Cristina): da de alta aquí a las dependientas — en cuanto exista una, aparece como
    botón de acceso directo en la pantalla de login.
-5. **Informes** (solo Cristina): totales por tipo, producto, empleada y turno en un rango de fechas, con
+5. **Informes** (solo Cristina): totales por tipo, producto, personal y turno en un rango de fechas, con
    exportación a CSV para pasarlo a la gestoría si hace falta.
+6. **Configuración** (solo Cristina): correo de destino para los cierres de turno, cuenta de correo
+   remitente (con contraseña de aplicación de Gmail) y cambio de su propia contraseña.
 
 ## Correo al cerrar turno
 

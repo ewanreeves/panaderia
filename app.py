@@ -64,7 +64,7 @@ def admin_required(view):
 def login():
     if request.method == "POST":
         password = request.form.get("password", "")
-        if password == config.APP_PASSWORD:
+        if password == db.get_config("admin_password", config.APP_PASSWORD):
             session.clear()
             session["rol"] = "admin"
             session["nombre"] = config.ADMIN_NOMBRE
@@ -72,6 +72,35 @@ def login():
             return redirect(destino)
         flash("Contraseña incorrecta")
     return render_template("login.html", empleadas=db.list_empleadas(), admin_nombre=config.ADMIN_NOMBRE)
+
+
+@app.route("/login/recuperar", methods=["POST"])
+def login_recuperar():
+    ultimo = db.get_config("recuperacion_ultimo_envio")
+    ahora = datetime.now()
+    if ultimo:
+        transcurrido = ahora - datetime.fromisoformat(ultimo)
+        if transcurrido.total_seconds() < 300:
+            flash("Ya se ha enviado una contraseña nueva hace un momento — revisa el correo.")
+            return redirect(url_for("login"))
+
+    destino = correo.ajustes_smtp()["destino"]
+    if not destino:
+        flash("No hay ningún correo configurado para recuperar la contraseña. Contacta con quien mantiene la app.")
+        return redirect(url_for("login"))
+
+    anterior = db.get_config("admin_password", config.APP_PASSWORD)
+    nueva = secrets.token_urlsafe(6)
+    db.set_config("admin_password", nueva)
+
+    ok, mensaje = correo.enviar_nueva_password(nueva, config.ADMIN_NOMBRE)
+    if ok:
+        db.set_config("recuperacion_ultimo_envio", ahora.isoformat(timespec="seconds"))
+        flash("Te hemos enviado una contraseña nueva por correo. La anterior ha dejado de funcionar.")
+    else:
+        db.set_config("admin_password", anterior)
+        flash(f"No se ha podido enviar el correo ({mensaje}). La contraseña no se ha cambiado — inténtalo más tarde.")
+    return redirect(url_for("login"))
 
 
 @app.route("/login/empleada/<int:empleada_id>", methods=["POST"])
@@ -294,48 +323,48 @@ def productos_importar_gotpv():
     return render_template("productos_importar_gotpv.html")
 
 
-# ---------- empleadas ----------
+# ---------- personal ----------
 
-@app.route("/empleadas")
+@app.route("/personal")
 @admin_required
-def empleadas():
-    return render_template("empleadas.html", empleadas=db.list_empleadas())
+def personal():
+    return render_template("personal.html", empleadas=db.list_empleadas())
 
 
-@app.route("/empleadas/nuevo", methods=["POST"])
+@app.route("/personal/nuevo", methods=["POST"])
 @admin_required
-def empleadas_nuevo():
+def personal_nuevo():
     nombre = request.form.get("nombre", "").strip()
     if not nombre:
         flash("El nombre es obligatorio")
-        return redirect(url_for("empleadas"))
+        return redirect(url_for("personal"))
     db.insert_empleada(nombre)
-    flash(f'Empleada "{nombre}" añadida')
-    return redirect(url_for("empleadas"))
+    flash(f'"{nombre}" añadido al personal')
+    return redirect(url_for("personal"))
 
 
-@app.route("/empleadas/<int:empleada_id>/editar", methods=["POST"])
+@app.route("/personal/<int:empleada_id>/editar", methods=["POST"])
 @admin_required
-def empleadas_editar(empleada_id):
+def personal_editar(empleada_id):
     if not db.get_empleada(empleada_id):
         abort(404)
     nombre = request.form.get("nombre", "").strip()
     if not nombre:
         flash("El nombre es obligatorio")
-        return redirect(url_for("empleadas"))
+        return redirect(url_for("personal"))
     db.update_empleada(empleada_id, nombre)
-    flash("Empleada actualizada")
-    return redirect(url_for("empleadas"))
+    flash("Actualizado")
+    return redirect(url_for("personal"))
 
 
-@app.route("/empleadas/<int:empleada_id>/eliminar", methods=["POST"])
+@app.route("/personal/<int:empleada_id>/eliminar", methods=["POST"])
 @admin_required
-def empleadas_eliminar(empleada_id):
+def personal_eliminar(empleada_id):
     if not db.get_empleada(empleada_id):
         abort(404)
     db.set_empleada_activa(empleada_id, activo=False)
-    flash("Empleada archivada")
-    return redirect(url_for("empleadas"))
+    flash("Archivado")
+    return redirect(url_for("personal"))
 
 
 # ---------- registro de movimientos ----------
@@ -600,7 +629,7 @@ def informes_exportar():
 
     buffer = io.StringIO()
     writer = csv.writer(buffer, delimiter=";")
-    writer.writerow(["Fecha", "Tipo", "Producto", "Cantidad", "Valor unitario", "Valor total", "Empleada", "Turno", "Motivo"])
+    writer.writerow(["Fecha", "Tipo", "Producto", "Cantidad", "Valor unitario", "Valor total", "Personal", "Turno", "Motivo"])
     for m in movimientos:
         writer.writerow([
             m["fecha"], db.TIPO_LABELS.get(m["tipo"], m["tipo"]), m["producto_nombre"],
@@ -639,6 +668,25 @@ def configuracion():
         smtp_user=ajustes["user"] or "",
         smtp_password_configurada=bool(ajustes["password"]),
     )
+
+
+@app.route("/configuracion/password", methods=["POST"])
+@admin_required
+def configuracion_password():
+    actual = request.form.get("actual", "")
+    nueva = request.form.get("nueva", "")
+    repetir = request.form.get("repetir", "")
+
+    if actual != db.get_config("admin_password", config.APP_PASSWORD):
+        flash("La contraseña actual no es correcta")
+    elif not nueva or len(nueva) < 4:
+        flash("La contraseña nueva tiene que tener al menos 4 caracteres")
+    elif nueva != repetir:
+        flash("La contraseña nueva no coincide en los dos campos")
+    else:
+        db.set_config("admin_password", nueva)
+        flash("Contraseña actualizada")
+    return redirect(url_for("configuracion"))
 
 
 if __name__ == "__main__":

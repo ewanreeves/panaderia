@@ -28,6 +28,10 @@
       </label>
       <button type="submit">Entrar como {{ admin_nombre }}</button>
     </form>
+    <form method="post" action="{{ url_for('login_recuperar') }}"
+      onsubmit="return confirm('Se generará una contraseña nueva y se enviará por correo. La contraseña actual dejará de funcionar. ¿Seguro?');">
+      <button type="submit" class="link olvidado">¿Has olvidado la contraseña?</button>
+    </form>
   </details>
 </div>
 {% endblock %}

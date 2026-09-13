@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Empleadas{% endblock %}
+{% block title %}Personal{% endblock %}
 {% block content %}
-<h1>Empleadas</h1>
-<p class="ayuda">Añade aquí a las dependientas del negocio para poder ver el desglose de merma, reciclaje, autoconsumo y errores por persona y turno en Informes.</p>
+<h1>Personal</h1>
+<p class="ayuda">Añade aquí al personal del negocio para poder ver el desglose de merma, reciclaje, autoconsumo y errores por persona y turno en Informes.</p>
 
 <details class="card" id="nueva-empleada">
-  <summary>Añadir empleada</summary>
-  <form method="post" action="{{ url_for('empleadas_nuevo') }}" class="fila-form-simple">
+  <summary>Añadir persona</summary>
+  <form method="post" action="{{ url_for('personal_nuevo') }}" class="fila-form-simple">
     <input type="text" name="nombre" placeholder="Nombre" required>
     <button type="submit">Añadir</button>
   </form>
@@ -21,19 +21,19 @@
     {% for e in empleadas %}
     <tr>
       <td>
-        <form method="post" action="{{ url_for('empleadas_editar', empleada_id=e.id) }}" class="fila-inline">
+        <form method="post" action="{{ url_for('personal_editar', empleada_id=e.id) }}" class="fila-inline">
           <input type="text" name="nombre" value="{{ e.nombre }}" required>
           <button type="submit" class="link">guardar</button>
         </form>
       </td>
       <td class="fila-acciones">
-        <form method="post" action="{{ url_for('empleadas_eliminar', empleada_id=e.id) }}" onsubmit="return confirm('¿Archivar esta empleada?');">
+        <form method="post" action="{{ url_for('personal_eliminar', empleada_id=e.id) }}" onsubmit="return confirm('¿Archivar a esta persona?');">
           <button type="submit" class="link-danger">archivar</button>
         </form>
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="2" class="empty">No hay empleadas todavía</td></tr>
+    <tr><td colspan="2" class="empty">No hay nadie en el personal todavía</td></tr>
     {% endfor %}
   </tbody>
 </table>

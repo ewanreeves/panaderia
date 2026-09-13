@@ -318,6 +318,7 @@ body:has(.login-box) {
 .login-admin summary::before { content: "🔒 "; }
 .login-admin form { margin-top: 14px; }
 .login-admin button { width: 100%; }
+.login-admin .olvidado { margin-top: 10px; font-size: 0.82rem; text-decoration: underline; }
 
 /* ---- pantalla de registro (estilo TPV) ---- */
 

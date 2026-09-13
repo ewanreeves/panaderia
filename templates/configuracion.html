@@ -33,4 +33,20 @@
 
   <button type="submit">Guardar</button>
 </form>
+
+<form method="post" action="{{ url_for('configuracion_password') }}" class="card">
+  <h2>Tu contraseña</h2>
+  <label>Contraseña actual
+    <input type="password" name="actual" required autocomplete="current-password">
+  </label>
+  <div class="fila">
+    <label>Contraseña nueva
+      <input type="password" name="nueva" required autocomplete="new-password" minlength="4">
+    </label>
+    <label>Repite la contraseña nueva
+      <input type="password" name="repetir" required autocomplete="new-password" minlength="4">
+    </label>
+  </div>
+  <button type="submit">Cambiar contraseña</button>
+</form>
 {% endblock %}
