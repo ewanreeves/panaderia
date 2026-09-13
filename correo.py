@@ -53,6 +53,7 @@ def construir_informe_html(turno, movimientos, totales_tipo, admin_nombre):
 CABECERA_FILL = PatternFill(start_color="F3E9D8", end_color="F3E9D8", fill_type="solid")
 CABECERA_FONT = Font(bold=True)
 EUROS = '#,##0.00 "€"'
+BASE_VALOR = {t: ("Precio de venta" if t == "errores" else "Coste") for t in db.TIPOS}
 
 
 def _autoajustar(ws, anchos):
@@ -60,70 +61,166 @@ def _autoajustar(ws, anchos):
         ws.column_dimensions[get_column_letter(i)].width = ancho
 
 
-def construir_excel_informe(turno, movimientos, totales_tipo, admin_nombre):
-    """Devuelve un BytesIO con el .xlsx: una hoja de resumen por tipo y otra con el detalle línea a línea."""
-    wb = Workbook()
-
-    resumen = wb.active
-    resumen.title = "Resumen"
-    resumen["A1"] = "Cierre de turno"
-    resumen["A1"].font = Font(bold=True, size=14)
-    resumen["A2"] = "Cerrado por"
-    resumen["B2"] = turno["cerrado_por"] or admin_nombre
-    resumen["A3"] = "Abierto"
-    resumen["B3"] = turno["abierto_en"]
-    resumen["A4"] = "Cerrado"
-    resumen["B4"] = turno["cerrado_en"]
-
-    fila = 6
-    resumen.cell(row=fila, column=1, value="Concepto").font = CABECERA_FONT
-    resumen.cell(row=fila, column=2, value="Nº movimientos").font = CABECERA_FONT
-    resumen.cell(row=fila, column=3, value="Valor total").font = CABECERA_FONT
-    for col in (1, 2, 3):
-        resumen.cell(row=fila, column=col).fill = CABECERA_FILL
-    total_general = 0.0
-    for t in db.TIPOS:
-        fila += 1
-        resumen.cell(row=fila, column=1, value=db.TIPO_LABELS.get(t, t))
-        resumen.cell(row=fila, column=2, value=totales_tipo[t]["n"])
-        celda_valor = resumen.cell(row=fila, column=3, value=totales_tipo[t]["total"])
-        celda_valor.number_format = EUROS
-        total_general += totales_tipo[t]["total"]
-    fila += 1
-    resumen.cell(row=fila, column=1, value="Total").font = Font(bold=True)
-    celda_total = resumen.cell(row=fila, column=3, value=total_general)
-    celda_total.font = Font(bold=True)
-    celda_total.number_format = EUROS
-    resumen.cell(row=fila, column=1).font = Font(bold=True)
-    _autoajustar(resumen, [16, 16, 14])
-
-    detalle = wb.create_sheet("Movimientos")
-    cabeceras = ["Fecha", "Concepto", "Producto", "Cantidad", "Unidad de valor", "Valor unitario",
-                 "Valor total", "Personal", "Turno", "Motivo"]
-    for col, texto in enumerate(cabeceras, start=1):
-        c = detalle.cell(row=1, column=col, value=texto)
+def _cabecera(ws, fila, textos):
+    for col, texto in enumerate(textos, start=1):
+        c = ws.cell(row=fila, column=col, value=texto)
         c.font = CABECERA_FONT
         c.fill = CABECERA_FILL
         c.alignment = Alignment(horizontal="left")
-    detalle.freeze_panes = "A2"
 
-    for fila_idx, m in enumerate(movimientos, start=2):
-        detalle.cell(row=fila_idx, column=1, value=m["fecha"])
-        detalle.cell(row=fila_idx, column=2, value=db.TIPO_LABELS.get(m["tipo"], m["tipo"]))
-        detalle.cell(row=fila_idx, column=3, value=m["producto_nombre"])
-        detalle.cell(row=fila_idx, column=4, value=m["cantidad"])
-        detalle.cell(row=fila_idx, column=5, value="coste" if m["tipo"] != "errores" else "precio de venta")
+
+def _agrupar(movimientos, clave_fn):
+    """Agrupa por (clave, tipo) y devuelve [(clave, tipo, cantidad, n, total), ...] ordenado por valor."""
+    grupos = {}
+    orden = []
+    for m in movimientos:
+        clave = (clave_fn(m), m["tipo"])
+        if clave not in grupos:
+            grupos[clave] = {"cantidad": 0, "n": 0, "total": 0.0}
+            orden.append(clave)
+        g = grupos[clave]
+        g["cantidad"] += m["cantidad"] or 0
+        g["n"] += 1
+        g["total"] += m["valor_total"] or 0
+    orden.sort(key=lambda c: -grupos[c]["total"])
+    return [(c[0], c[1], grupos[c]) for c in orden]
+
+
+def _hoja_resumen(wb, turno, totales_tipo, admin_nombre):
+    ws = wb.active
+    ws.title = "Resumen"
+    ws["A1"] = "Cierre de turno"
+    ws["A1"].font = Font(bold=True, size=14)
+    ws["A2"] = "Cerrado por"
+    ws["B2"] = turno["cerrado_por"] or admin_nombre
+    ws["A3"] = "Abierto"
+    ws["B3"] = turno["abierto_en"]
+    ws["A4"] = "Cerrado"
+    ws["B4"] = turno["cerrado_en"]
+
+    fila = 6
+    _cabecera(ws, fila, ["Concepto", "Nº movimientos", "Valor total", "Valorado a"])
+    total_general = 0.0
+    for t in db.TIPOS:
+        fila += 1
+        ws.cell(row=fila, column=1, value=db.TIPO_LABELS.get(t, t))
+        ws.cell(row=fila, column=2, value=totales_tipo[t]["n"])
+        celda_valor = ws.cell(row=fila, column=3, value=totales_tipo[t]["total"])
+        celda_valor.number_format = EUROS
+        ws.cell(row=fila, column=4, value=BASE_VALOR[t])
+        total_general += totales_tipo[t]["total"]
+    fila += 1
+    ws.cell(row=fila, column=1, value="Total").font = Font(bold=True)
+    celda_total = ws.cell(row=fila, column=3, value=total_general)
+    celda_total.font = Font(bold=True)
+    celda_total.number_format = EUROS
+
+    fila += 3
+    ws.cell(row=fila, column=1, value=(
+        'Los movimientos de "Errores" se borran de la app tras este cierre — esta hoja y la pestaña '
+        '"Errores" son el único registro que queda de ellos.'
+    )).font = Font(italic=True, color="8B7C68")
+    ws.merge_cells(start_row=fila, start_column=1, end_row=fila, end_column=4)
+    _autoajustar(ws, [16, 16, 14, 16])
+
+
+def _hoja_tipo(wb, tipo, movimientos_tipo):
+    ws = wb.create_sheet(db.TIPO_LABELS.get(tipo, tipo))
+    ws["A1"] = f"Valorado a: {BASE_VALOR[tipo]}"
+    ws["A1"].font = Font(italic=True, color="8B7C68")
+
+    cabeceras = ["Fecha", "Producto", "Cantidad", "Valor unitario", "Valor total", "Personal", "Turno", "Motivo"]
+    fila_cab = 3
+    _cabecera(ws, fila_cab, cabeceras)
+    ws.freeze_panes = f"A{fila_cab + 1}"
+
+    fila = fila_cab
+    total = 0.0
+    for m in movimientos_tipo:
+        fila += 1
+        ws.cell(row=fila, column=1, value=m["fecha"])
+        ws.cell(row=fila, column=2, value=m["producto_nombre"])
+        ws.cell(row=fila, column=3, value=m["cantidad"])
         if m["valor_unitario"] is not None:
-            c = detalle.cell(row=fila_idx, column=6, value=m["valor_unitario"])
-            c.number_format = EUROS
+            ws.cell(row=fila, column=4, value=m["valor_unitario"]).number_format = EUROS
         if m["valor_total"] is not None:
-            c = detalle.cell(row=fila_idx, column=7, value=m["valor_total"])
-            c.number_format = EUROS
-        detalle.cell(row=fila_idx, column=8, value=m["empleada_nombre"] or "")
-        detalle.cell(row=fila_idx, column=9, value=db.TURNO_LABELS.get(m["turno"], m["turno"] or ""))
-        detalle.cell(row=fila_idx, column=10, value=m["motivo"] or "")
+            ws.cell(row=fila, column=5, value=m["valor_total"]).number_format = EUROS
+            total += m["valor_total"]
+        ws.cell(row=fila, column=6, value=m["empleada_nombre"] or "")
+        ws.cell(row=fila, column=7, value=db.TURNO_LABELS.get(m["turno"], m["turno"] or ""))
+        ws.cell(row=fila, column=8, value=m["motivo"] or "")
 
-    _autoajustar(detalle, [12, 14, 30, 10, 15, 14, 14, 16, 10, 30])
+    if not movimientos_tipo:
+        ws.cell(row=fila_cab + 1, column=1, value="Sin movimientos en este turno").font = Font(italic=True)
+    else:
+        fila += 1
+        ws.cell(row=fila, column=1, value="Total").font = Font(bold=True)
+        c = ws.cell(row=fila, column=5, value=total)
+        c.font = Font(bold=True)
+        c.number_format = EUROS
+
+    _autoajustar(ws, [12, 30, 10, 14, 14, 16, 10, 30])
+
+
+def _hoja_agrupada(wb, nombre, titulo_columna, grupos):
+    ws = wb.create_sheet(nombre)
+    _cabecera(ws, 1, [titulo_columna, "Concepto", "Cantidad", "Nº movimientos", "Valor total"])
+    ws.freeze_panes = "A2"
+    fila = 1
+    for clave, tipo, datos in grupos:
+        fila += 1
+        ws.cell(row=fila, column=1, value=clave)
+        ws.cell(row=fila, column=2, value=db.TIPO_LABELS.get(tipo, tipo))
+        ws.cell(row=fila, column=3, value=datos["cantidad"])
+        ws.cell(row=fila, column=4, value=datos["n"])
+        ws.cell(row=fila, column=5, value=datos["total"]).number_format = EUROS
+    if fila == 1:
+        ws.cell(row=2, column=1, value="Sin movimientos en este turno").font = Font(italic=True)
+    _autoajustar(ws, [26, 16, 12, 14, 14])
+
+
+def _hoja_todo(wb, movimientos):
+    ws = wb.create_sheet("Detalle completo")
+    cabeceras = ["Fecha", "Concepto", "Producto", "Cantidad", "Valorado a", "Valor unitario",
+                 "Valor total", "Personal", "Turno", "Motivo"]
+    _cabecera(ws, 1, cabeceras)
+    ws.freeze_panes = "A2"
+    for fila, m in enumerate(movimientos, start=2):
+        ws.cell(row=fila, column=1, value=m["fecha"])
+        ws.cell(row=fila, column=2, value=db.TIPO_LABELS.get(m["tipo"], m["tipo"]))
+        ws.cell(row=fila, column=3, value=m["producto_nombre"])
+        ws.cell(row=fila, column=4, value=m["cantidad"])
+        ws.cell(row=fila, column=5, value=BASE_VALOR.get(m["tipo"], ""))
+        if m["valor_unitario"] is not None:
+            ws.cell(row=fila, column=6, value=m["valor_unitario"]).number_format = EUROS
+        if m["valor_total"] is not None:
+            ws.cell(row=fila, column=7, value=m["valor_total"]).number_format = EUROS
+        ws.cell(row=fila, column=8, value=m["empleada_nombre"] or "")
+        ws.cell(row=fila, column=9, value=db.TURNO_LABELS.get(m["turno"], m["turno"] or ""))
+        ws.cell(row=fila, column=10, value=m["motivo"] or "")
+    _autoajustar(ws, [12, 14, 30, 10, 15, 14, 14, 16, 10, 30])
+
+
+def construir_excel_informe(turno, movimientos, totales_tipo, admin_nombre):
+    """Devuelve un BytesIO con el .xlsx: resumen, una pestaña por concepto (con su subtotal),
+    agregados por producto y por personal, y el detalle completo cronológico. Es el único
+    registro que queda de los movimientos de "Errores" una vez cerrado el turno."""
+    wb = Workbook()
+    _hoja_resumen(wb, turno, totales_tipo, admin_nombre)
+
+    # "Errores" primero: es el único concepto que desaparece de la app tras el cierre.
+    orden_tipos = ["errores"] + [t for t in db.TIPOS if t != "errores"]
+    for t in orden_tipos:
+        movimientos_tipo = [m for m in movimientos if m["tipo"] == t]
+        _hoja_tipo(wb, t, movimientos_tipo)
+
+    por_producto = _agrupar(movimientos, lambda m: m["producto_nombre"])
+    _hoja_agrupada(wb, "Por producto", "Producto", por_producto)
+
+    por_personal = _agrupar(movimientos, lambda m: m["empleada_nombre"] or "Sin asignar")
+    _hoja_agrupada(wb, "Por personal", "Personal", por_personal)
+
+    _hoja_todo(wb, movimientos)
 
     buffer = io.BytesIO()
     wb.save(buffer)
