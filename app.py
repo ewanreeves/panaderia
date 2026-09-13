@@ -16,6 +16,7 @@ import config
 import database as db
 import importador
 import correo
+import respaldo
 import gotpv_import
 from iconos import icono_para_producto
 
@@ -577,10 +578,13 @@ def turno_cerrar():
     db.eliminar_errores_desde(turno["abierto_en"], ahora)
     db.cerrar_turno(turno["id"], session.get("nombre"), email_enviado=ok)
 
-    if ok:
-        flash("Turno cerrado. Informe enviado por correo y los errores del turno se han borrado.")
-    else:
-        flash(f"Turno cerrado y errores borrados, pero {mensaje.lower()}")
+    ok_backup, mensaje_backup = respaldo.hacer_backup()
+
+    partes = ["Turno cerrado."]
+    partes.append("Informe enviado por correo." if ok else f"Correo no enviado ({mensaje.lower()}).")
+    partes.append("Copia de seguridad guardada en Drive." if ok_backup else f"Sin copia de seguridad ({mensaje_backup}).")
+    partes.append("Los errores del turno se han borrado.")
+    flash(" ".join(partes))
     return redirect(url_for("registro"))
 
 
@@ -652,11 +656,13 @@ def configuracion():
         email_destino = request.form.get("email_destino", "").strip()
         smtp_user = request.form.get("smtp_user", "").strip()
         smtp_password = request.form.get("smtp_password", "")
+        drive_backup_folder = request.form.get("drive_backup_folder", "").strip()
 
         db.set_config("email_destino", email_destino)
         db.set_config("smtp_user", smtp_user)
         if smtp_password:
             db.set_config("smtp_password", smtp_password)
+        db.set_config("drive_backup_folder", drive_backup_folder)
 
         flash("Configuración guardada")
         return redirect(url_for("configuracion"))
@@ -667,6 +673,7 @@ def configuracion():
         email_destino=ajustes["destino"] or "",
         smtp_user=ajustes["user"] or "",
         smtp_password_configurada=bool(ajustes["password"]),
+        drive_backup_folder=db.get_config("drive_backup_folder", ""),
     )
 
 

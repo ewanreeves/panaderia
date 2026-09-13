@@ -31,6 +31,24 @@
     <input type="password" name="smtp_password" placeholder="{{ 'ya configurada — déjalo en blanco para no cambiarla' if smtp_password_configurada else 'pega aquí el código de 16 letras' }}" autocomplete="new-password">
   </label>
 
+  <h2>Copia de seguridad en Drive</h2>
+  <p class="ayuda">
+    Cada vez que cierres un turno, la app guarda una copia de la base de datos en una carpeta que tú
+    elijas. Para que acabe en Google Drive, esa carpeta tiene que ser una carpeta local sincronizada
+    por <b>Google Drive para escritorio</b> (con la misma cuenta de arriba, la que envía los correos).
+    No hace falta ninguna cuenta ni permiso nuevo: la app solo deja el fichero ahí, es Drive quien lo
+    sube solo.
+  </p>
+  <ol class="ayuda pasos">
+    <li>Si no lo tienes, instala <a href="https://www.google.com/intl/es/drive/download/" target="_blank" rel="noopener">Google Drive para escritorio</a> e inicia sesión con tu cuenta.</li>
+    <li>Dentro de tu Drive (en el Explorador de Windows), crea una carpeta, por ejemplo "Copias panadería".</li>
+    <li>Haz clic derecho sobre ella → <b>Copiar como ruta de acceso</b>, y pégala aquí abajo.</li>
+  </ol>
+  <label>Carpeta local de Drive donde guardar las copias
+    <input type="text" name="drive_backup_folder" value="{{ drive_backup_folder }}" placeholder="G:\Mi unidad\Copias panadería">
+  </label>
+  <p class="ayuda">Si lo dejas en blanco, el cierre de turno funciona igual pero sin copia de seguridad.</p>
+
   <button type="submit">Guardar</button>
 </form>
 

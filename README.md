@@ -70,6 +70,16 @@ caja) pero no sale el correo — se avisa por pantalla.
 valores por defecto (útiles para variables de entorno en un despliegue), pero lo guardado desde
 Configuración manda siempre sobre eso.
 
+## Copia de seguridad en Drive
+
+También desde **Configuración**. Cada cierre de turno guarda una copia de `data/app.db` (con marca de
+fecha/hora, sin sobrescribir las anteriores) en la carpeta local que se indique. No se usa la API de
+Google Drive (exigiría un proyecto en Google Cloud y volver a autenticar cada pocos días mientras la
+app no esté verificada por Google) — en vez de eso, la carpeta debe ser una carpeta sincronizada por
+**Google Drive para escritorio**, con la misma cuenta que envía los correos. La app solo deja el
+fichero ahí; es Drive quien lo sube. Si no hay carpeta configurada o no existe, el cierre de turno
+sigue funcionando igual, solo que sin copia de seguridad (se avisa por pantalla).
+
 ## Actualizar la app en el PC de la clienta
 
 El proyecto ya es un repositorio git (`git init` hecho, primer commit hecho). `data/` (la base de datos
