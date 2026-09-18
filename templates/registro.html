@@ -18,7 +18,7 @@
   <div class="turno-acciones">
     {% if turno_abierto %}
     <form method="post" action="{{ url_for('turno_cerrar') }}"
-      onsubmit="return confirm('¿Cerrar el turno? Se enviará el informe por correo y se borrarán los movimientos de Errores registrados en este turno.');">
+      onsubmit="return confirm('¿Cerrar el turno? Se enviará el informe por correo electrónico.');">
       <button type="submit" class="btn-cierre">🔒 Cerrar turno</button>
     </form>
     {% else %}
@@ -27,6 +27,31 @@
     </form>
     {% endif %}
   </div>
+</div>
+
+<div class="card fichaje-card no-print">
+  <h2>Fichar</h2>
+  <div class="fichaje-activas">
+    {% for f in fichajes_activos %}
+    <span class="badge badge-fichada">🟢 {{ f.empleada_nombre }} — entrada {{ f.entrada[11:16] }}</span>
+    {% else %}
+    <span class="ayuda">Nadie fichada ahora mismo.</span>
+    {% endfor %}
+  </div>
+  {% if empleadas %}
+  <form method="post" action="{{ url_for('fichar') }}" class="fichaje-form">
+    <select name="empleada_id" required>
+      <option value="" selected disabled>— Selecciona —</option>
+      {% for e in empleadas %}
+      <option value="{{ e.id }}">{{ e.nombre }}{{ ' (fichada)' if e.id in ids_fichadas else '' }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" name="accion" value="entrada" class="btn-fichar-entrada">Fichar entrada</button>
+    <button type="submit" name="accion" value="salida" class="btn-fichar-salida">Fichar salida</button>
+  </form>
+  {% else %}
+  <p class="ayuda">Todavía no hay nadie dado de alta en Personal.</p>
+  {% endif %}
 </div>
 
 {% if not turno_abierto %}
@@ -116,18 +141,15 @@
       {% endfor %}
     </div>
 
-    {% if rol == 'empleada' %}
-    <p class="ayuda campo-pequeno">Registrando como <strong>{{ session.get('nombre') }}</strong></p>
-    {% else %}
     <label class="campo-pequeno">Quién registra
-      <select name="empleada_id" id="f-empleada">
-        <option value="admin" selected>{{ admin_nombre }} (tú)</option>
+      <select name="empleada_id" id="f-empleada" required>
+        <option value="" selected disabled>— Selecciona quién eres —</option>
         {% for e in empleadas %}
         <option value="{{ e.id }}">{{ e.nombre }}</option>
         {% endfor %}
+        <option value="admin">{{ admin_nombre }}</option>
       </select>
     </label>
-    {% endif %}
 
     <label class="campo-pequeno">Turno</label>
     <div class="turno-botones">

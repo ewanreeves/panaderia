@@ -1,7 +1,7 @@
-# Gestión interna (merma, reciclaje, autoconsumo, errores)
+# Gestión interna (merma, reciclaje, autoconsumo, errores, fichajes)
 
 App sencilla para llevar el control interno de merma, reciclaje, autoconsumo y errores de caja,
-al margen del TPV.
+al margen del TPV, más el fichaje de entrada/salida del personal.
 
 ## Poner en marcha
 
@@ -16,11 +16,14 @@ venv\Scripts\python.exe app.py
 
 Abre http://127.0.0.1:5000. Hay dos formas de entrar:
 
-- **Personal**: un botón por cada persona dada de alta (sin contraseña) — solo pueden registrar
-  tickets, y en "Hoy" solo ven los suyos. No pueden entrar a Productos, Personal ni Informes
-  (si prueban la URL directamente, la app les redirige a Registrar).
+- **Caja**: un único botón compartido, sin contraseña, para cualquiera del personal. Solo puede
+  registrar tickets y fichar entrada/salida — no puede entrar a Productos, Personal, Informes ni
+  Configuración (si prueba la URL directamente, la app le redirige a Registrar). Como el login ya
+  no identifica a la persona, el desplegable "Quién registra" de cada ticket es obligatorio: hay
+  que elegir el nombre siempre, no se puede enviar el formulario sin seleccionarlo.
 - **Administración (Cristina)**: acceso completo con contraseña — por defecto `Panaderia2026`
-  (cámbiala en `config.py`, junto con `ADMIN_NOMBRE` si el nombre cambia).
+  (cámbiala desde la propia app en Configuración, o en `config.py`, junto con `ADMIN_NOMBRE` si el
+  nombre cambia).
 
 Para cargar un catálogo y unos movimientos de ejemplo (útil para hacer una demo):
 
@@ -37,22 +40,32 @@ y unos días de movimientos de ejemplo. No lo ejecutes sobre datos reales de la 
    (en el paso de importación puedes indicar qué columna es el nombre, precio, coste, etc.).
 2. **Registrar**: pantalla tipo TPV — se van tocando los productos de la carta (pueden ser varios, de
    categorías distintas) para montar un ticket, se elige el tipo (merma/reciclaje/autoconsumo/errores),
-   quién lo registra y el turno (mañana/tarde), y se registra de una vez. El valor se calcula solo a
-   partir del coste/precio del producto.
+   quién lo registra (obligatorio: todo el personal dado de alta, más Cristina al final de la lista) y
+   el turno (mañana/tarde), y se registra de una vez. El valor se calcula solo a partir del coste/precio
+   del producto.
 3. **Turno (apertura/cierre de caja)**: arriba del todo en Registrar. Es independiente de la hora — se
    puede cerrar y abrir caja las veces que haga falta en un día. Al **cerrar turno**:
-   - se envía un correo (con un Excel adjunto con todos los movimientos) con el informe de todo lo
+   - se envía un correo (con un Excel adjunto con todos los movimientos, más una pestaña con las horas
+     de entrada y salida del personal que ha estado fichado durante el turno) con el informe de todo lo
      registrado desde la apertura, al correo configurado en **Configuración**;
-   - los movimientos de tipo **Errores** de ese turno se BORRAN por completo (no quedan en Informes);
+   - los movimientos de tipo **Errores** de ese turno se BORRAN por completo (no quedan en Informes,
+     pero sí quedan en ese Excel — es el único registro que sobrevive de ellos);
    - el resto (merma, reciclaje, autoconsumo) queda guardado como siempre.
    Mientras el turno está cerrado no se pueden registrar tickets, hay que pulsar "Abrir turno" primero.
    El total de Errores acumulado en el turno actual se ve en la burbuja junto al estado del turno.
-4. **Personal** (solo Cristina): da de alta aquí a las dependientas — en cuanto exista una, aparece como
-   botón de acceso directo en la pantalla de login.
-5. **Informes** (solo Cristina): totales por tipo, producto, personal y turno en un rango de fechas, con
+4. **Personal** (solo Cristina): da de alta aquí a las dependientas — nombre, apellidos, DNI y horas de
+   jornada semanal. En cuanto exista una persona, aparece en el desplegable de Registrar y en el de
+   Fichar.
+5. **Fichar** (en Registrar, arriba de la carta): desplegable con todo el personal activo y dos
+   botones, "Fichar entrada" y "Fichar salida". Se ve quién está fichada ahora mismo con la hora de
+   entrada. Las horas que queden registradas son siempre las reales — la app no las redondea ni las
+   ajusta a la jornada de contrato bajo ningún concepto, ni aunque se pasen de las horas pactadas: el
+   registro horario tiene que reflejar la realidad, es obligatorio por ley (RD-ley 8/2019).
+6. **Informes** (solo Cristina): totales por tipo, producto, personal y turno en un rango de fechas, con
    exportación a CSV para pasarlo a la gestoría si hace falta.
-6. **Configuración** (solo Cristina): correo de destino para los cierres de turno, cuenta de correo
-   remitente (con contraseña de aplicación de Gmail) y cambio de su propia contraseña.
+7. **Configuración** (solo Cristina): correo de destino para los cierres de turno, cuenta de correo
+   remitente (con contraseña de aplicación de Gmail), carpeta de copia de seguridad y cambio de su
+   propia contraseña.
 
 ## Correo al cerrar turno
 

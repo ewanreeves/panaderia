@@ -1,5 +1,6 @@
 import io
 import smtplib
+from datetime import datetime
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -23,7 +24,43 @@ def ajustes_smtp():
     }
 
 
-def construir_informe_html(turno, movimientos, totales_tipo, admin_nombre):
+def _horas_entre(entrada_iso, salida_iso):
+    """Horas reales entre dos marcas ISO. Sin retoques: si no hay salida, se calcula hasta
+    ahora y se marca como en curso — nunca se recorta ni se redondea al alza ni a la baja."""
+    inicio = datetime.fromisoformat(entrada_iso)
+    if salida_iso:
+        fin = datetime.fromisoformat(salida_iso)
+        en_curso = False
+    else:
+        fin = datetime.now()
+        en_curso = True
+    horas = (fin - inicio).total_seconds() / 3600
+    return round(horas, 2), en_curso
+
+
+def _fichajes_html(fichajes):
+    if not fichajes:
+        return "<p><i>Nadie fichó entrada durante este turno.</i></p>"
+    filas = []
+    total_horas = 0.0
+    for f in fichajes:
+        horas, en_curso = _horas_entre(f["entrada"], f["salida"])
+        total_horas += horas
+        salida_txt = f["salida"][11:16] if f["salida"] else "— (sigue fichada)"
+        filas.append(
+            f"<tr><td>{f['empleada_nombre']}</td><td>{f['entrada'][11:16]}</td>"
+            f"<td>{salida_txt}</td><td>{horas:.2f} h</td></tr>"
+        )
+    return f"""
+    <table border="1" cellpadding="4" cellspacing="0">
+      <tr><th>Personal</th><th>Entrada</th><th>Salida</th><th>Horas</th></tr>
+      {''.join(filas)}
+    </table>
+    <p><b>Total horas fichadas:</b> {total_horas:.2f} h</p>
+    """
+
+
+def construir_informe_html(turno, movimientos, totales_tipo, admin_nombre, fichajes=None):
     filas = "".join(
         f"<tr><td>{m['fecha']}</td><td>{db.TIPO_LABELS.get(m['tipo'], m['tipo'])}</td>"
         f"<td>{m['producto_nombre']}</td><td>{m['cantidad']}</td>"
@@ -43,6 +80,8 @@ def construir_informe_html(turno, movimientos, totales_tipo, admin_nombre):
     <ul>{resumen}</ul>
     <p><i>Los movimientos de tipo "Errores" se han eliminado tras este envío y no aparecen en Informes.</i></p>
     <p>Se adjunta el detalle completo en Excel.</p>
+    <h3>Personal — entrada y salida</h3>
+    {_fichajes_html(fichajes or [])}
     <table border="1" cellpadding="4" cellspacing="0">
       <tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Cant.</th><th>Valor</th><th>Personal</th><th>Motivo</th></tr>
       {filas}
@@ -179,6 +218,29 @@ def _hoja_agrupada(wb, nombre, titulo_columna, grupos):
     _autoajustar(ws, [26, 16, 12, 14, 14])
 
 
+def _hoja_fichajes(wb, fichajes):
+    ws = wb.create_sheet("Personal - horas")
+    _cabecera(ws, 1, ["Personal", "Entrada", "Salida", "Horas trabajadas"])
+    ws.freeze_panes = "A2"
+    fila = 1
+    total = 0.0
+    for f in fichajes:
+        fila += 1
+        horas, en_curso = _horas_entre(f["entrada"], f["salida"])
+        total += horas
+        ws.cell(row=fila, column=1, value=f["empleada_nombre"])
+        ws.cell(row=fila, column=2, value=f["entrada"])
+        ws.cell(row=fila, column=3, value=f["salida"] or "Sigue fichada")
+        ws.cell(row=fila, column=4, value=horas)
+    if fila == 1:
+        ws.cell(row=2, column=1, value="Nadie fichó entrada en este turno").font = Font(italic=True)
+    else:
+        fila += 1
+        ws.cell(row=fila, column=1, value="Total horas").font = Font(bold=True)
+        ws.cell(row=fila, column=4, value=round(total, 2)).font = Font(bold=True)
+    _autoajustar(ws, [22, 20, 20, 18])
+
+
 def _hoja_todo(wb, movimientos):
     ws = wb.create_sheet("Detalle completo")
     cabeceras = ["Fecha", "Concepto", "Producto", "Cantidad", "Valorado a", "Valor unitario",
@@ -201,12 +263,13 @@ def _hoja_todo(wb, movimientos):
     _autoajustar(ws, [12, 14, 30, 10, 15, 14, 14, 16, 10, 30])
 
 
-def construir_excel_informe(turno, movimientos, totales_tipo, admin_nombre):
-    """Devuelve un BytesIO con el .xlsx: resumen, una pestaña por concepto (con su subtotal),
-    agregados por producto y por personal, y el detalle completo cronológico. Es el único
-    registro que queda de los movimientos de "Errores" una vez cerrado el turno."""
+def construir_excel_informe(turno, movimientos, totales_tipo, admin_nombre, fichajes=None):
+    """Devuelve un BytesIO con el .xlsx: resumen, horas del personal, una pestaña por concepto
+    (con su subtotal), agregados por producto y por personal, y el detalle completo cronológico.
+    Es el único registro que queda de los movimientos de "Errores" una vez cerrado el turno."""
     wb = Workbook()
     _hoja_resumen(wb, turno, totales_tipo, admin_nombre)
+    _hoja_fichajes(wb, fichajes or [])
 
     # "Errores" primero: es el único concepto que desaparece de la app tras el cierre.
     orden_tipos = ["errores"] + [t for t in db.TIPOS if t != "errores"]
@@ -228,7 +291,7 @@ def construir_excel_informe(turno, movimientos, totales_tipo, admin_nombre):
     return buffer
 
 
-def enviar_informe_turno(turno, movimientos, totales_tipo, admin_nombre):
+def enviar_informe_turno(turno, movimientos, totales_tipo, admin_nombre, fichajes=None):
     """Devuelve (ok, mensaje). No lanza excepción: si falla el envío, el cierre debe continuar igualmente."""
     ajustes = ajustes_smtp()
     if not ajustes["user"] or not ajustes["password"]:
@@ -238,8 +301,8 @@ def enviar_informe_turno(turno, movimientos, totales_tipo, admin_nombre):
 
     destinatarios = [d.strip() for d in ajustes["destino"].split(",") if d.strip()]
 
-    html = construir_informe_html(turno, movimientos, totales_tipo, admin_nombre)
-    excel = construir_excel_informe(turno, movimientos, totales_tipo, admin_nombre)
+    html = construir_informe_html(turno, movimientos, totales_tipo, admin_nombre, fichajes)
+    excel = construir_excel_informe(turno, movimientos, totales_tipo, admin_nombre, fichajes)
 
     msg = MIMEMultipart()
     msg["Subject"] = f"Cierre de turno {turno['cerrado_en']}"

@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const turnoBtns = document.querySelectorAll(".btn-turno");
 
   const fTipo = document.getElementById("f-tipo");
+  const fEmpleada = document.getElementById("f-empleada");
   const fTurno = document.getElementById("f-turno");
   const fLineas = document.getElementById("f-lineas");
   const carritoEl = document.getElementById("carrito");
@@ -172,6 +173,13 @@ document.addEventListener("DOMContentLoaded", () => {
       error.textContent = "Selecciona el tipo de movimiento (merma, reciclaje, autoconsumo o errores)";
       error.hidden = false;
       error.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    if (fEmpleada && !fEmpleada.value) {
+      e.preventDefault();
+      error.textContent = "Selecciona quién registra el ticket — es obligatorio";
+      error.hidden = false;
+      fEmpleada.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   });
 

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Editar persona{% endblock %}
+{% block content %}
+<h1>Editar persona</h1>
+<form method="post" class="card">
+  <label>Nombre
+    <input type="text" name="nombre" value="{{ e.nombre }}" required>
+  </label>
+  <label>Apellidos
+    <input type="text" name="apellidos" value="{{ e.apellidos or '' }}">
+  </label>
+  <div class="fila">
+    <label>DNI
+      <input type="text" name="dni" value="{{ e.dni or '' }}">
+    </label>
+    <label>Horas de jornada semanal
+      <input type="text" inputmode="decimal" name="horas_semanales" value="{{ e.horas_semanales if e.horas_semanales is not none else '' }}">
+    </label>
+  </div>
+  <button type="submit">Guardar</button>
+  <a class="boton-secundario" href="{{ url_for('personal') }}">Cancelar</a>
+</form>
+{% endblock %}

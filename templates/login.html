@@ -6,19 +6,14 @@
   <h1>Gestión interna</h1>
   <p class="login-sub">panadería · cafetería</p>
 
-  {% if empleadas %}
-  <p class="login-quien">¿Quién eres?</p>
-  <div class="login-empleadas">
-    {% for e in empleadas %}
-    <form method="post" action="{{ url_for('login_empleada', empleada_id=e.id) }}">
-      <button type="submit" class="login-empleada-btn">
-        <span class="login-empleada-avatar">👩‍🍳</span>
-        {{ e.nombre }}
+  <div class="login-roles">
+    <form method="post" action="{{ url_for('login_caja') }}">
+      <button type="submit" class="login-rol-btn">
+        <span class="login-rol-icono">🧾</span>
+        Caja
       </button>
     </form>
-    {% endfor %}
   </div>
-  {% endif %}
 
   <details class="login-admin">
     <summary>Acceso administración</summary>

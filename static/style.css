@@ -211,6 +211,8 @@ input[type=text]:focus, input[type=password]:focus, input[type=date]:focus, sele
 .fila-form-simple { display: flex; gap: 8px; }
 .fila-form-simple input { margin: 0; }
 
+.fila-form-personal { grid-template-columns: 1.4fr 1.4fr 1.2fr 1fr auto; }
+
 .fila-inline { display: flex; gap: 10px; align-items: center; }
 .fila-inline input { margin: 0; }
 
@@ -263,43 +265,30 @@ body:has(.login-box) {
 
 .login-box-ancho { max-width: 440px; }
 
-.login-quien {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--ink);
-  margin: 4px 0 14px;
-}
-
-.login-empleadas {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 10px;
-  margin-bottom: 24px;
-}
-.login-empleada-btn {
+.login-roles { margin-bottom: 24px; }
+.login-rol-btn {
   width: 100%;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   background: var(--card);
   color: var(--ink);
   border: 1.5px solid var(--line);
-  padding: 16px 8px;
-  border-radius: 14px;
+  padding: 22px 8px;
+  border-radius: 16px;
   font-weight: 700;
-  font-size: 0.88rem;
+  font-size: 1.05rem;
   box-shadow: var(--shadow);
 }
-.login-empleada-btn:hover { background: var(--brand-light); border-color: var(--brand); color: var(--ink); box-shadow: var(--shadow-lift); }
-.login-empleada-avatar {
-  width: 42px;
-  height: 42px;
+.login-rol-btn:hover { background: var(--brand-light); border-color: var(--brand); color: var(--ink); box-shadow: var(--shadow-lift); }
+.login-rol-icono {
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: var(--bg-alt);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
+  font-size: 1.7rem;
 }
 
 .login-admin {
@@ -848,6 +837,18 @@ body:has(.login-box) {
   text-align: center;
   padding: 48px 24px;
 }
+
+/* ---- fichar entrada/salida ---- */
+
+.fichaje-card h2 { margin: 0 0 12px; }
+.fichaje-activas { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.badge-fichada { background: var(--reciclaje-light); color: var(--reciclaje); }
+.fichaje-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.fichaje-form select { flex: 1; min-width: 180px; margin: 0; }
+.btn-fichar-entrada { background: var(--reciclaje); }
+.btn-fichar-entrada:hover { background: #24593f; }
+.btn-fichar-salida { background: var(--merma); }
+.btn-fichar-salida:hover { background: #8f2b25; }
 .turno-cerrado-panel .emoji-grande { font-size: 2.6rem; display: block; margin-bottom: 10px; }
 .turno-cerrado-panel p { color: var(--muted); margin-bottom: 18px; }
 

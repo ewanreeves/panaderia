@@ -2,12 +2,15 @@
 {% block title %}Personal{% endblock %}
 {% block content %}
 <h1>Personal</h1>
-<p class="ayuda">Añade aquí al personal del negocio para poder ver el desglose de merma, reciclaje, autoconsumo y errores por persona y turno en Informes.</p>
+<p class="ayuda">Añade aquí al personal del negocio para poder ver el desglose de merma, reciclaje, autoconsumo y errores por persona y turno en Informes, y para que puedan fichar entrada/salida en Registrar.</p>
 
 <details class="card" id="nueva-empleada">
   <summary>Añadir persona</summary>
-  <form method="post" action="{{ url_for('personal_nuevo') }}" class="fila-form-simple">
+  <form method="post" action="{{ url_for('personal_nuevo') }}" class="fila-form fila-form-personal">
     <input type="text" name="nombre" placeholder="Nombre" required>
+    <input type="text" name="apellidos" placeholder="Apellidos">
+    <input type="text" name="dni" placeholder="DNI">
+    <input type="text" inputmode="decimal" name="horas_semanales" placeholder="Horas/semana">
     <button type="submit">Añadir</button>
   </form>
 </details>
@@ -15,25 +18,24 @@
 <div class="tabla-scroll">
 <table class="tabla">
   <thead>
-    <tr><th>Nombre</th><th></th></tr>
+    <tr><th>Nombre</th><th>Apellidos</th><th>DNI</th><th>Horas/semana</th><th></th></tr>
   </thead>
   <tbody>
     {% for e in empleadas %}
     <tr>
-      <td>
-        <form method="post" action="{{ url_for('personal_editar', empleada_id=e.id) }}" class="fila-inline">
-          <input type="text" name="nombre" value="{{ e.nombre }}" required>
-          <button type="submit" class="link">guardar</button>
-        </form>
-      </td>
+      <td>{{ e.nombre }}</td>
+      <td>{{ e.apellidos or '' }}</td>
+      <td>{{ e.dni or '' }}</td>
+      <td>{{ e.horas_semanales if e.horas_semanales is not none else '' }}</td>
       <td class="fila-acciones">
+        <a class="link" href="{{ url_for('personal_editar', empleada_id=e.id) }}">editar</a>
         <form method="post" action="{{ url_for('personal_eliminar', empleada_id=e.id) }}" onsubmit="return confirm('¿Archivar a esta persona?');">
           <button type="submit" class="link-danger">archivar</button>
         </form>
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="2" class="empty">No hay nadie en el personal todavía</td></tr>
+    <tr><td colspan="5" class="empty">No hay nadie en el personal todavía</td></tr>
     {% endfor %}
   </tbody>
 </table>

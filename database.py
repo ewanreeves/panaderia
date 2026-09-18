@@ -84,7 +84,19 @@ def init_db():
         CREATE TABLE IF NOT EXISTS empleadas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT NOT NULL,
+            apellidos TEXT,
+            dni TEXT,
+            horas_semanales REAL,
             activo INTEGER DEFAULT 1
+        );
+
+        CREATE TABLE IF NOT EXISTS fichajes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            empleada_id INTEGER NOT NULL,
+            empleada_nombre TEXT NOT NULL,
+            entrada TEXT NOT NULL,
+            salida TEXT,
+            FOREIGN KEY(empleada_id) REFERENCES empleadas(id)
         );
 
         CREATE TABLE IF NOT EXISTS turnos (
@@ -117,6 +129,13 @@ def init_db():
     columnas_prod = [r["name"] for r in conn.execute("PRAGMA table_info(productos)").fetchall()]
     if "foto" not in columnas_prod:
         conn.execute("ALTER TABLE productos ADD COLUMN foto TEXT")
+    columnas_emp = [r["name"] for r in conn.execute("PRAGMA table_info(empleadas)").fetchall()]
+    if "apellidos" not in columnas_emp:
+        conn.execute("ALTER TABLE empleadas ADD COLUMN apellidos TEXT")
+    if "dni" not in columnas_emp:
+        conn.execute("ALTER TABLE empleadas ADD COLUMN dni TEXT")
+    if "horas_semanales" not in columnas_emp:
+        conn.execute("ALTER TABLE empleadas ADD COLUMN horas_semanales REAL")
     # "Invitación" se eliminó como tipo — los movimientos antiguos pasan a "errores".
     conn.execute("UPDATE movimientos SET tipo='errores' WHERE tipo='invitacion'")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_movimientos_lote ON movimientos(lote)")
@@ -240,18 +259,24 @@ def get_empleada(empleada_id):
     return row
 
 
-def insert_empleada(nombre):
+def insert_empleada(nombre, apellidos=None, dni=None, horas_semanales=None):
     conn = get_db()
-    cur = conn.execute("INSERT INTO empleadas (nombre) VALUES (?)", (nombre.strip(),))
+    cur = conn.execute(
+        "INSERT INTO empleadas (nombre, apellidos, dni, horas_semanales) VALUES (?, ?, ?, ?)",
+        (nombre.strip(), apellidos, dni, horas_semanales),
+    )
     conn.commit()
     new_id = cur.lastrowid
     conn.close()
     return new_id
 
 
-def update_empleada(empleada_id, nombre):
+def update_empleada(empleada_id, nombre, apellidos=None, dni=None, horas_semanales=None):
     conn = get_db()
-    conn.execute("UPDATE empleadas SET nombre=? WHERE id=?", (nombre.strip(), empleada_id))
+    conn.execute(
+        "UPDATE empleadas SET nombre=?, apellidos=?, dni=?, horas_semanales=? WHERE id=?",
+        (nombre.strip(), apellidos, dni, horas_semanales, empleada_id),
+    )
     conn.commit()
     conn.close()
 
@@ -520,3 +545,71 @@ def set_config(clave, valor):
     )
     conn.commit()
     conn.close()
+
+
+# ---------- fichajes (control de horas) ----------
+
+def get_fichaje_abierto(empleada_id):
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM fichajes WHERE empleada_id = ? AND salida IS NULL ORDER BY id DESC LIMIT 1",
+        (empleada_id,),
+    ).fetchone()
+    conn.close()
+    return row
+
+
+def fichajes_activos():
+    """Todo el mundo que está fichada ahora mismo (sin salida registrada)."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM fichajes WHERE salida IS NULL ORDER BY entrada ASC"
+    ).fetchall()
+    conn.close()
+    return rows
+
+
+def fichar_entrada(empleada_id, empleada_nombre):
+    conn = get_db()
+    cur = conn.execute(
+        "INSERT INTO fichajes (empleada_id, empleada_nombre, entrada) VALUES (?, ?, ?)",
+        (empleada_id, empleada_nombre, datetime.now().isoformat(timespec="seconds")),
+    )
+    conn.commit()
+    new_id = cur.lastrowid
+    conn.close()
+    return new_id
+
+
+def fichar_salida(fichaje_id):
+    conn = get_db()
+    conn.execute(
+        "UPDATE fichajes SET salida=? WHERE id=?",
+        (datetime.now().isoformat(timespec="seconds"), fichaje_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def fichajes_del_turno(abierto_en, hasta=None):
+    """Fichajes cuya entrada cae dentro de la ventana del turno (igual criterio que los movimientos)."""
+    conn = get_db()
+    q = "SELECT * FROM fichajes WHERE entrada >= ?"
+    params = [abierto_en]
+    if hasta:
+        q += " AND entrada <= ?"
+        params.append(hasta)
+    q += " ORDER BY entrada ASC"
+    rows = conn.execute(q, params).fetchall()
+    conn.close()
+    return rows
+
+
+def fichajes_rango(desde_iso, hasta_iso):
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM fichajes WHERE entrada >= ? AND entrada <= ? ORDER BY entrada ASC",
+        (desde_iso, hasta_iso),
+    ).fetchall()
+    conn.close()
+    return rows

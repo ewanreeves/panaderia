@@ -72,7 +72,7 @@ def login():
             destino = request.args.get("next") or url_for("informes")
             return redirect(destino)
         flash("Contraseña incorrecta")
-    return render_template("login.html", empleadas=db.list_empleadas(), admin_nombre=config.ADMIN_NOMBRE)
+    return render_template("login.html", admin_nombre=config.ADMIN_NOMBRE)
 
 
 @app.route("/login/recuperar", methods=["POST"])
@@ -104,16 +104,11 @@ def login_recuperar():
     return redirect(url_for("login"))
 
 
-@app.route("/login/empleada/<int:empleada_id>", methods=["POST"])
-def login_empleada(empleada_id):
-    empleada = db.get_empleada(empleada_id)
-    if not empleada or not empleada["activo"]:
-        flash("Esa empleada ya no está activa")
-        return redirect(url_for("login"))
+@app.route("/login/caja", methods=["POST"])
+def login_caja():
     session.clear()
     session["rol"] = "empleada"
-    session["empleada_id"] = empleada["id"]
-    session["nombre"] = empleada["nombre"]
+    session["nombre"] = "Caja"
     return redirect(url_for("registro"))
 
 
@@ -339,23 +334,37 @@ def personal_nuevo():
     if not nombre:
         flash("El nombre es obligatorio")
         return redirect(url_for("personal"))
-    db.insert_empleada(nombre)
+    db.insert_empleada(
+        nombre,
+        apellidos=request.form.get("apellidos", "").strip() or None,
+        dni=request.form.get("dni", "").strip() or None,
+        horas_semanales=importador.parse_numero(request.form.get("horas_semanales")),
+    )
     flash(f'"{nombre}" añadido al personal')
     return redirect(url_for("personal"))
 
 
-@app.route("/personal/<int:empleada_id>/editar", methods=["POST"])
+@app.route("/personal/<int:empleada_id>/editar", methods=["GET", "POST"])
 @admin_required
 def personal_editar(empleada_id):
-    if not db.get_empleada(empleada_id):
+    empleada = db.get_empleada(empleada_id)
+    if not empleada:
         abort(404)
-    nombre = request.form.get("nombre", "").strip()
-    if not nombre:
-        flash("El nombre es obligatorio")
+    if request.method == "POST":
+        nombre = request.form.get("nombre", "").strip()
+        if not nombre:
+            flash("El nombre es obligatorio")
+            return redirect(url_for("personal_editar", empleada_id=empleada_id))
+        db.update_empleada(
+            empleada_id,
+            nombre,
+            apellidos=request.form.get("apellidos", "").strip() or None,
+            dni=request.form.get("dni", "").strip() or None,
+            horas_semanales=importador.parse_numero(request.form.get("horas_semanales")),
+        )
+        flash("Actualizado")
         return redirect(url_for("personal"))
-    db.update_empleada(empleada_id, nombre)
-    flash("Actualizado")
-    return redirect(url_for("personal"))
+    return render_template("personal_editar.html", e=empleada)
 
 
 @app.route("/personal/<int:empleada_id>/eliminar", methods=["POST"])
@@ -389,21 +398,20 @@ def registro():
             flash("Selecciona el tipo de movimiento")
             return redirect(url_for("registro"))
 
-        if rol == "empleada":
-            empleada_id_db = session.get("empleada_id")
-            empleada_nombre = session.get("nombre")
+        seleccion = request.form.get("empleada_id")
+        if not seleccion:
+            flash("Selecciona quién registra el ticket")
+            return redirect(url_for("registro"))
+        if seleccion == "admin":
+            empleada_id_db = None
+            empleada_nombre = config.ADMIN_NOMBRE
         else:
-            seleccion = request.form.get("empleada_id") or "admin"
-            if seleccion == "admin":
-                empleada_id_db = None
-                empleada_nombre = config.ADMIN_NOMBRE
-            else:
-                empleada = db.get_empleada(seleccion)
-                if not empleada:
-                    flash("Selecciona quién registra el ticket")
-                    return redirect(url_for("registro"))
-                empleada_id_db = empleada["id"]
-                empleada_nombre = empleada["nombre"]
+            empleada = db.get_empleada(seleccion)
+            if not empleada:
+                flash("Selecciona quién registra el ticket")
+                return redirect(url_for("registro"))
+            empleada_id_db = empleada["id"]
+            empleada_nombre = empleada["nombre"]
 
         try:
             lineas = json.loads(request.form.get("lineas") or "[]")
@@ -466,8 +474,6 @@ def registro():
         })
     hoy = date.today().isoformat()
     de_hoy = [m for m in db.list_movimientos() if m["fecha"] == hoy]
-    if rol == "empleada":
-        de_hoy = [m for m in de_hoy if m["empleada_id"] == session.get("empleada_id")]
     total_hoy = sum(m["valor_total"] or 0 for m in de_hoy)
 
     tickets_hoy = []
@@ -497,13 +503,16 @@ def registro():
     if turno_abierto:
         total_errores_turno, _ = db.total_errores_desde(turno_abierto["abierto_en"])
 
+    empleadas = db.list_empleadas()
+    ids_fichadas = {f["empleada_id"] for f in db.fichajes_activos()}
+
     return render_template(
         "registro.html",
         categorias=categorias,
         por_categoria=por_categoria,
         tipos=db.TIPOS,
         tipo_labels=db.TIPO_LABELS,
-        empleadas=db.list_empleadas(),
+        empleadas=empleadas,
         turnos=db.TURNOS,
         turno_abierto=turno_abierto,
         total_errores_turno=total_errores_turno,
@@ -512,16 +521,14 @@ def registro():
         total_hoy=total_hoy,
         rol=rol,
         admin_nombre=config.ADMIN_NOMBRE,
+        fichajes_activos=db.fichajes_activos(),
+        ids_fichadas=ids_fichadas,
     )
 
 
 @app.route("/registro/<int:movimiento_id>/eliminar", methods=["POST"])
 @login_required
 def registro_eliminar(movimiento_id):
-    movimiento = db.get_movimiento(movimiento_id)
-    if movimiento and session.get("rol") == "empleada" and movimiento["empleada_id"] != session.get("empleada_id"):
-        flash("No puedes eliminar movimientos de otra persona")
-        return redirect(request.referrer or url_for("registro"))
     db.delete_movimiento(movimiento_id)
     flash("Movimiento eliminado")
     return redirect(request.referrer or url_for("registro"))
@@ -530,13 +537,39 @@ def registro_eliminar(movimiento_id):
 @app.route("/registro/lote/<lote>/eliminar", methods=["POST"])
 @login_required
 def registro_lote_eliminar(lote):
-    lineas = db.get_movimientos_por_lote(lote)
-    if lineas and session.get("rol") == "empleada" and lineas[0]["empleada_id"] != session.get("empleada_id"):
-        flash("No puedes eliminar tickets de otra persona")
-        return redirect(request.referrer or url_for("registro"))
     db.delete_movimientos_por_lote(lote)
     flash("Ticket eliminado")
     return redirect(request.referrer or url_for("registro"))
+
+
+# ---------- fichajes ----------
+
+@app.route("/fichar", methods=["POST"])
+@login_required
+def fichar():
+    empleada_id = request.form.get("empleada_id")
+    accion = request.form.get("accion")
+    empleada = db.get_empleada(empleada_id) if empleada_id else None
+    if not empleada:
+        flash("Selecciona quién ficha")
+        return redirect(url_for("registro"))
+
+    abierto = db.get_fichaje_abierto(empleada["id"])
+    if accion == "entrada":
+        if abierto:
+            flash(f'{empleada["nombre"]} ya tiene fichada la entrada de las {abierto["entrada"][11:16]}')
+        else:
+            db.fichar_entrada(empleada["id"], empleada["nombre"])
+            flash(f'Entrada fichada: {empleada["nombre"]}')
+    elif accion == "salida":
+        if not abierto:
+            flash(f'{empleada["nombre"]} no tiene ninguna entrada fichada')
+        else:
+            db.fichar_salida(abierto["id"])
+            flash(f'Salida fichada: {empleada["nombre"]}')
+    else:
+        flash("Acción no válida")
+    return redirect(url_for("registro"))
 
 
 # ---------- apertura / cierre de turno ----------
@@ -562,6 +595,7 @@ def turno_cerrar():
 
     ahora = datetime.now().isoformat(timespec="seconds")
     movimientos = db.movimientos_del_turno(turno["abierto_en"], ahora)
+    fichajes = db.fichajes_del_turno(turno["abierto_en"], ahora)
     totales_tipo = {
         t: {
             "n": sum(1 for m in movimientos if m["tipo"] == t),
@@ -573,7 +607,9 @@ def turno_cerrar():
     turno_para_correo["cerrado_en"] = ahora
     turno_para_correo["cerrado_por"] = session.get("nombre")
 
-    ok, mensaje = correo.enviar_informe_turno(turno_para_correo, movimientos, totales_tipo, config.ADMIN_NOMBRE)
+    ok, mensaje = correo.enviar_informe_turno(
+        turno_para_correo, movimientos, totales_tipo, config.ADMIN_NOMBRE, fichajes
+    )
 
     db.eliminar_errores_desde(turno["abierto_en"], ahora)
     db.cerrar_turno(turno["id"], session.get("nombre"), email_enviado=ok)
