@@ -66,6 +66,34 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
+
+  <div id="overlay-espera" class="overlay-espera" hidden>
+    <div class="overlay-espera-caja">
+      <div class="spinner"></div>
+      <p>Cerrando turno… no cierres esta ventana.</p>
+    </div>
+  </div>
+  <script>
+    function confirmarCierreTurno() {
+      if (!confirm('¿Cerrar el turno? Se enviará el informe por correo electrónico y se hará una copia de seguridad.')) {
+        return false;
+      }
+      document.getElementById('overlay-espera').hidden = false;
+      return true;
+    }
+
+    function confirmarBorradoDemo(form) {
+      const valor = form.confirmacion.value.trim().toUpperCase();
+      if (valor !== 'BORRAR') {
+        alert('Escribe BORRAR (en mayúsculas) en el campo para confirmar.');
+        return false;
+      }
+      return confirm(
+        '¿Seguro? Se van a borrar TODOS los movimientos, fichajes, turnos y personal. ' +
+        'Los productos y esta configuración no se tocan. Esto no se puede deshacer desde la app.'
+      );
+    }
+  </script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

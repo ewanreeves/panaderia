@@ -214,7 +214,8 @@ input[type=text]:focus, input[type=password]:focus, input[type=date]:focus, sele
 .fila-form-personal { grid-template-columns: 1.4fr 1.4fr 1.2fr 1fr auto; }
 .fila-form-horas { grid-template-columns: 1.2fr 1.3fr 1.3fr 1.6fr auto; }
 
-.fila-inline { display: flex; gap: 10px; align-items: center; }
+.fila-inline { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.fila-inline label { flex: 1; min-width: 220px; margin-bottom: 0; }
 .fila-inline input { margin: 0; }
 
 button, .boton-secundario {
@@ -834,6 +835,11 @@ body:has(.login-box) {
 .btn-abrir { background: var(--reciclaje); }
 .btn-abrir:hover { background: #24593f; }
 
+.card-peligro { border-color: var(--danger); background: var(--merma-light); }
+.card-peligro h2 { color: var(--danger); }
+.btn-peligro { background: var(--danger); color: #fff; }
+.btn-peligro:hover { background: #8f2b25; }
+
 .turno-cerrado-panel {
   text-align: center;
   padding: 48px 24px;
@@ -954,4 +960,39 @@ details.card form { padding: 0 20px 20px; }
   .fila { flex-direction: column; gap: 0; }
   .topbar { padding: 12px 16px; }
   .brand-sub { display: none; }
+}
+
+/* ---- espera al cerrar turno ---- */
+
+.overlay-espera {
+  position: fixed;
+  inset: 0;
+  background: rgba(43, 32, 22, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.overlay-espera-caja {
+  background: var(--card);
+  padding: 30px 40px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+.overlay-espera-caja p { margin: 0; font-weight: 600; color: var(--ink); }
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid var(--line);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: girar 0.8s linear infinite;
+}
+@keyframes girar {
+  to { transform: rotate(360deg); }
 }

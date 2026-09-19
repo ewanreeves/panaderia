@@ -664,3 +664,21 @@ def delete_fichaje(fichaje_id):
     conn.execute("DELETE FROM fichajes WHERE id = ?", (fichaje_id,))
     conn.commit()
     conn.close()
+
+
+# ---------- borrado de datos de demo ----------
+
+def borrar_datos_demo():
+    """Borra movimientos, fichajes, turnos y personal. No toca productos ni configuracion.
+    Deja un turno recién abierto para que la app siga usable justo después del borrado."""
+    conn = get_db()
+    conn.execute("DELETE FROM movimientos")
+    conn.execute("DELETE FROM fichajes")
+    conn.execute("DELETE FROM turnos")
+    conn.execute("DELETE FROM empleadas")
+    conn.execute(
+        "INSERT INTO turnos (abierto_en, abierto_por) VALUES (?, ?)",
+        (datetime.now().isoformat(timespec="seconds"), None),
+    )
+    conn.commit()
+    conn.close()

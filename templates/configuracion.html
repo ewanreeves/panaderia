@@ -31,26 +31,27 @@
     <input type="password" name="smtp_password" placeholder="{{ 'ya configurada — déjalo en blanco para no cambiarla' if smtp_password_configurada else 'pega aquí el código de 16 letras' }}" autocomplete="new-password">
   </label>
 
-  <h2>Copia de seguridad en Drive</h2>
-  <p class="ayuda">
-    Cada vez que cierres un turno, la app guarda una copia de la base de datos en una carpeta que tú
-    elijas. Para que acabe en Google Drive, esa carpeta tiene que ser una carpeta local sincronizada
-    por <b>Google Drive para escritorio</b> (con la misma cuenta de arriba, la que envía los correos).
-    No hace falta ninguna cuenta ni permiso nuevo: la app solo deja el fichero ahí, es Drive quien lo
-    sube solo.
-  </p>
-  <ol class="ayuda pasos">
-    <li>Si no lo tienes, instala <a href="https://www.google.com/intl/es/drive/download/" target="_blank" rel="noopener">Google Drive para escritorio</a> e inicia sesión con tu cuenta.</li>
-    <li>Dentro de tu Drive (en el Explorador de Windows), crea una carpeta, por ejemplo "Copias panadería".</li>
-    <li>Haz clic derecho sobre ella → <b>Copiar como ruta de acceso</b>, y pégala aquí abajo.</li>
-  </ol>
-  <label>Carpeta local de Drive donde guardar las copias
-    <input type="text" name="drive_backup_folder" value="{{ drive_backup_folder }}" placeholder="G:\Mi unidad\Copias panadería">
-  </label>
-  <p class="ayuda">Si lo dejas en blanco, el cierre de turno funciona igual pero sin copia de seguridad.</p>
-
   <button type="submit">Guardar</button>
 </form>
+
+<div class="card">
+  <h2>Copia de seguridad</h2>
+  <p class="ayuda">
+    Cada cierre de turno guarda automáticamente una copia de la base de datos en la carpeta
+    <code>backups</code>, dentro del propio PC — no hace falta configurar nada. Se guardan varias
+    copias con distinta antigüedad, por si un día hace falta recuperar algo:
+  </p>
+  <ul class="ayuda pasos">
+    <li><b>Diaria:</b> la última copia de cada uno de los últimos 5 días.</li>
+    <li><b>Semanal:</b> una copia por semana, las últimas 4 semanas.</li>
+    <li><b>Mensual:</b> una copia por mes, los últimos 12 meses.</li>
+    <li><b>Anual:</b> una copia por año, los últimos 5 años.</li>
+  </ul>
+  <p class="ayuda">
+    Son copias solo en este PC. Si quieres tenerlas también fuera (un USB, otro disco, la nube...),
+    puedes copiar de vez en cuando la carpeta <code>backups</code> a mano.
+  </p>
+</div>
 
 <form method="post" action="{{ url_for('configuracion_password') }}" class="card">
   <h2>Tu contraseña</h2>
@@ -67,4 +68,22 @@
   </div>
   <button type="submit">Cambiar contraseña</button>
 </form>
+
+<div class="card card-peligro">
+  <h2>Borrar datos de demo</h2>
+  <p class="ayuda">
+    Borra <b>todos</b> los movimientos (merma, reciclaje, autoconsumo, errores), los fichajes, los
+    turnos y el personal dado de alta — para dejar la app limpia antes de que la clienta empiece a
+    usarla de verdad. <b>No toca</b> los productos ni esta configuración (correo, contraseña...).
+    Antes de borrar se hace una copia de seguridad, por si hiciera falta recuperar algo.
+  </p>
+  <p class="ayuda"><b>Esto no se puede deshacer</b> desde la propia app.</p>
+  <form method="post" action="{{ url_for('configuracion_borrar_demo') }}"
+    onsubmit="return confirmarBorradoDemo(this);" class="fila-inline">
+    <label>Escribe <code>BORRAR</code> para confirmar
+      <input type="text" name="confirmacion" autocomplete="off" required>
+    </label>
+    <button type="submit" class="btn-peligro">Borrar datos de demo</button>
+  </form>
+</div>
 {% endblock %}

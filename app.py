@@ -618,7 +618,7 @@ def turno_cerrar():
 
     partes = ["Turno cerrado."]
     partes.append("Informe enviado por correo." if ok else f"Correo no enviado ({mensaje.lower()}).")
-    partes.append("Copia de seguridad guardada en Drive." if ok_backup else f"Sin copia de seguridad ({mensaje_backup}).")
+    partes.append("Copia de seguridad guardada." if ok_backup else f"Sin copia de seguridad ({mensaje_backup}).")
     partes.append("Los errores del turno se han borrado.")
     flash(" ".join(partes))
     return redirect(url_for("registro"))
@@ -790,13 +790,11 @@ def configuracion():
         email_destino = request.form.get("email_destino", "").strip()
         smtp_user = request.form.get("smtp_user", "").strip()
         smtp_password = request.form.get("smtp_password", "")
-        drive_backup_folder = request.form.get("drive_backup_folder", "").strip()
 
         db.set_config("email_destino", email_destino)
         db.set_config("smtp_user", smtp_user)
         if smtp_password:
             db.set_config("smtp_password", smtp_password)
-        db.set_config("drive_backup_folder", drive_backup_folder)
 
         flash("Configuración guardada")
         return redirect(url_for("configuracion"))
@@ -807,7 +805,6 @@ def configuracion():
         email_destino=ajustes["destino"] or "",
         smtp_user=ajustes["user"] or "",
         smtp_password_configurada=bool(ajustes["password"]),
-        drive_backup_folder=db.get_config("drive_backup_folder", ""),
     )
 
 
@@ -827,6 +824,22 @@ def configuracion_password():
     else:
         db.set_config("admin_password", nueva)
         flash("Contraseña actualizada")
+    return redirect(url_for("configuracion"))
+
+
+@app.route("/configuracion/borrar-demo", methods=["POST"])
+@admin_required
+def configuracion_borrar_demo():
+    if request.form.get("confirmacion", "").strip().upper() != "BORRAR":
+        flash('Para borrar los datos de demo hay que escribir "BORRAR" exactamente')
+        return redirect(url_for("configuracion"))
+
+    respaldo.hacer_backup()
+    db.borrar_datos_demo()
+    flash(
+        "Datos de demo borrados: movimientos, fichajes, turnos y personal. "
+        "Productos y configuración no se han tocado. Se hizo una copia de seguridad justo antes."
+    )
     return redirect(url_for("configuracion"))
 
 

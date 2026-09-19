@@ -71,8 +71,11 @@ y unos días de movimientos de ejemplo. No lo ejecutes sobre datos reales de la 
    para que las horas cuadren con el contrato — eso seguiría sin reflejar lo que ha trabajado cada
    persona, que es justo lo que exige la ley.
 7. **Configuración** (solo Cristina): correo de destino para los cierres de turno, cuenta de correo
-   remitente (con contraseña de aplicación de Gmail), carpeta de copia de seguridad y cambio de su
-   propia contraseña.
+   remitente (con contraseña de aplicación de Gmail) y cambio de su propia contraseña. También explica
+   la copia de seguridad automática (ver más abajo) y tiene un botón para **borrar los datos de
+   demo** (movimientos, fichajes, turnos y personal — no toca productos ni esta configuración), pensado
+   para dejar la app limpia justo antes de que la clienta empiece a usarla de verdad. Pide escribir
+   "BORRAR" y confirmar aparte, y hace una copia de seguridad justo antes de borrar.
 
 ## Correo al cerrar turno
 
@@ -90,15 +93,25 @@ caja) pero no sale el correo — se avisa por pantalla.
 valores por defecto (útiles para variables de entorno en un despliegue), pero lo guardado desde
 Configuración manda siempre sobre eso.
 
-## Copia de seguridad en Drive
+## Copia de seguridad
 
-También desde **Configuración**. Cada cierre de turno guarda una copia de `data/app.db` (con marca de
-fecha/hora, sin sobrescribir las anteriores) en la carpeta local que se indique. No se usa la API de
-Google Drive (exigiría un proyecto en Google Cloud y volver a autenticar cada pocos días mientras la
-app no esté verificada por Google) — en vez de eso, la carpeta debe ser una carpeta sincronizada por
-**Google Drive para escritorio**, con la misma cuenta que envía los correos. La app solo deja el
-fichero ahí; es Drive quien lo sube. Si no hay carpeta configurada o no existe, el cierre de turno
-sigue funcionando igual, solo que sin copia de seguridad (se avisa por pantalla).
+Automática, en local, sin configurar nada: cada cierre de turno guarda una copia de `data/app.db` en
+la carpeta `backups/` (dentro de la propia carpeta de la app), con cuatro niveles de retención tipo
+"abuelo-padre-hijo":
+
+- **`backups/diario`**: la última copia de cada uno de los últimos 5 días.
+- **`backups/semanal`**: una copia por semana, las últimas 4 semanas.
+- **`backups/mensual`**: una copia por mes, los últimos 12 meses.
+- **`backups/anual`**: una copia por año, los últimos 5 años.
+
+Cada carpeta se poda por su cuenta, así que una copia ya promovida a semanal/mensual/anual no
+desaparece cuando se poda el nivel diario. Si el cierre de turno hace dos copias el mismo día, en
+`diario` solo se queda la más reciente de las dos.
+
+Son copias solo en el propio PC (no se sube nada a ningún servicio en la nube — la clienta no tiene
+cuenta de Google). Si se quiere una copia fuera del PC, hay que copiar la carpeta `backups/` a mano de
+vez en cuando (a un USB, otro disco, etc.). Si por lo que sea falla la copia de seguridad, el cierre de
+turno sigue funcionando igual (se avisa por pantalla).
 
 ## Actualizar la app en el PC de la clienta
 

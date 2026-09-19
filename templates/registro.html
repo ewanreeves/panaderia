@@ -17,8 +17,7 @@
   </div>
   <div class="turno-acciones">
     {% if turno_abierto %}
-    <form method="post" action="{{ url_for('turno_cerrar') }}"
-      onsubmit="return confirm('¿Cerrar el turno? Se enviará el informe por correo electrónico.');">
+    <form method="post" action="{{ url_for('turno_cerrar') }}" onsubmit="return confirmarCierreTurno();">
       <button type="submit" class="btn-cierre">🔒 Cerrar turno</button>
     </form>
     {% else %}
