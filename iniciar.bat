@@ -2,15 +2,12 @@
 setlocal
 cd /d "%~dp0"
 
-echo Buscando actualizaciones...
-git pull --ff-only >nul 2>&1
-
-echo Comprobando dependencias...
-venv\Scripts\python.exe -m pip install -q -r requirements.txt >nul 2>&1
-
-if not exist config.py (
-    echo No existe config.py, lo creo a partir de config.example.py...
-    copy /y config.example.py config.py >nul
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0setup.ps1"
+if errorlevel 1 (
+    echo.
+    echo No se ha podido preparar la app. Revisa el mensaje de arriba.
+    pause
+    exit /b 1
 )
 
 echo Iniciando Gestion interna...

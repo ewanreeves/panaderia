@@ -5,9 +5,14 @@ al margen del TPV, más el fichaje de entrada/salida del personal.
 
 ## Poner en marcha
 
-En el PC de la clienta, doble clic en **`iniciar.bat`** — busca actualizaciones (si hay internet y
-está configurado el repositorio, ver más abajo), instala dependencias si han cambiado, y abre la app
-en el navegador. Es el único icono que necesita la clienta.
+En el PC de la clienta, doble clic en **`iniciar.bat`**. Es el único icono que necesita la clienta.
+La primera vez, si hace falta, instala solo Git y Python (con [winget](https://aka.ms/getwinget),
+necesita internet), crea el entorno virtual e instala las dependencias; las siguientes veces solo
+busca actualizaciones (`git pull`), comprueba dependencias y abre la app en el navegador. Si la
+carpeta se copia a otro PC y el entorno virtual que trae no funciona ahí (pasa si Python estaba en
+otra ruta en el PC original), `iniciar.bat` lo detecta solo y lo vuelve a crear — no hace falta
+borrar nada a mano. Si algo falla de verdad (por ejemplo, no hay internet la primera vez y falta
+Git o Python), se para con un mensaje claro en vez de fallar en silencio.
 
 Para desarrollo (en tu PC):
 ```
@@ -129,14 +134,22 @@ con tu cuenta:
    git push -u origin main
    ```
 
-**Una vez, en el PC de la clienta** (necesita [Git for Windows](https://git-scm.com/download/win)
-instalado — instalador normal, todo por defecto):
-```
-git clone https://github.com/TU-USUARIO/NOMBRE-REPO.git
-```
-Eso crea la carpeta del proyecto ya conectada al repositorio. Copia dentro tu `venv/` (o créalo de
-nuevo con `py -m venv venv` + `venv\Scripts\python.exe -m pip install -r requirements.txt`), copia
-`config.example.py` como `config.py` y rellénalo con la contraseña real y los datos de correo.
+**En el PC de la clienta**, dos formas de llevar la app, las dos válidas:
+
+- **`git clone`** (necesita Git ya instalado, o dejar que `iniciar.bat` lo instale solo la primera
+  vez — ver más abajo): `git clone https://github.com/TU-USUARIO/NOMBRE-REPO.git`. Crea la carpeta
+  ya conectada al repositorio, para que las actualizaciones futuras lleguen solas con `iniciar.bat`.
+- **Copiar la carpeta entera** (USB, red, lo que sea) tal cual la tienes en tu PC, `venv/` incluido.
+  No pasa nada si ese `venv/` no funciona en el PC de destino (es lo normal si Python estaba
+  instalado en otra ruta) — `iniciar.bat` lo detecta y lo vuelve a crear solo. Si la carpeta ya
+  incluye tu `data/app.db` y tu `config.py`, mejor: así no hay que reimportar productos ni volver a
+  configurar el correo.
+
+En cualquiera de los dos casos, el primer doble clic en `iniciar.bat` deja todo listo: instala Git
+y Python si faltan (con winget, necesita internet), crea o repara el entorno virtual, instala las
+dependencias, y si no existe `config.py` lo crea a partir de `config.example.py` (habría que
+rellenarlo luego con la contraseña real y los datos de correo desde **Configuración**, dentro de la
+propia app).
 
 **A partir de ahí**, cada vez que quieras publicar un cambio: edítalo aquí, `git add -A`,
 `git commit -m "..."`, `git push`. La próxima vez que la clienta (o quien sea) haga doble clic en
