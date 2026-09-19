@@ -63,7 +63,13 @@ $pythonCmd = if (Tiene-Comando 'py') { 'py' } else { 'python' }
 
 if ((Tiene-Comando 'git') -and (Test-Path '.git')) {
     Write-Host "Buscando actualizaciones..."
+    # Sin credenciales guardadas, git intentaria pedir usuario/contrasena. Esto hace que
+    # falle rapido en vez de quedarse colgado esperando un login que nadie va a rellenar.
+    $env:GIT_TERMINAL_PROMPT = '0'
     git pull --ff-only
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "No se ha podido buscar actualizaciones (sin internet o sin acceso al repositorio). Sigo con el codigo que ya hay."
+    }
 }
 
 # El venv puede venir roto si la carpeta se copio de otro PC (Python estaba en otra ruta)

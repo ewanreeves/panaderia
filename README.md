@@ -26,9 +26,9 @@ Abre http://127.0.0.1:5000. Hay dos formas de entrar:
   Configuración (si prueba la URL directamente, la app le redirige a Registrar). Como el login ya
   no identifica a la persona, el desplegable "Quién registra" de cada ticket es obligatorio: hay
   que elegir el nombre siempre, no se puede enviar el formulario sin seleccionarlo.
-- **Administración (Cristina)**: acceso completo con contraseña — por defecto `Panaderia2026`
-  (cámbiala desde la propia app en Configuración, o en `config.py`, junto con `ADMIN_NOMBRE` si el
-  nombre cambia).
+- **Administración (Cristina)**: acceso completo con contraseña — la de partida es la que tenga
+  `APP_PASSWORD` en tu propio `config.py` (no se sube a git). Cámbiala cuanto antes desde la propia
+  app en Configuración, o en `config.py`, junto con `ADMIN_NOMBRE` si el nombre cambia.
 
 Para cargar un catálogo y unos movimientos de ejemplo (útil para hacer una demo):
 
@@ -120,19 +120,10 @@ turno sigue funcionando igual (se avisa por pantalla).
 
 ## Actualizar la app en el PC de la clienta
 
-El proyecto ya es un repositorio git (`git init` hecho, primer commit hecho). `data/` (la base de datos
-real de la clienta) y `config.py` (sus contraseñas) están en `.gitignore` — un `git pull` nunca los toca,
-solo actualiza el código. Para dejarlo funcionando de verdad falta un paso único que tienes que hacer tú
-con tu cuenta:
-
-**Una vez, desde tu PC:**
-1. Crea un repositorio **privado** en GitHub (github.com → New repository → Private).
-2. Conéctalo y sube el código:
-   ```
-   git remote add origin https://github.com/TU-USUARIO/NOMBRE-REPO.git
-   git branch -M main
-   git push -u origin main
-   ```
+El código vive en [github.com/ewanreeves/panaderia](https://github.com/ewanreeves/panaderia)
+(repositorio **público** — el código en sí no es sensible; lo que sí lo es, `data/app.db` de la
+clienta y `config.py` con sus contraseñas, está en `.gitignore` y nunca se sube). Al ser público, no
+hace falta ninguna credencial para que `git pull` funcione solo en el PC de la clienta.
 
 **En el PC de la clienta**, dos formas de llevar la app, las dos válidas:
 
