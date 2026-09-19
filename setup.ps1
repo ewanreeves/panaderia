@@ -27,6 +27,15 @@ function Tiene-Comando($nombre) {
     return [bool](Get-Command $nombre -ErrorAction SilentlyContinue)
 }
 
+function Python-Que-Funciona($nombre) {
+    # Get-Command no basta: Windows trae un "python.exe" falso en WindowsApps que solo
+    # sirve para redirigir a la Microsoft Store, y Get-Command lo detecta igual que uno
+    # real aunque no ejecute nada. Hay que probarlo de verdad.
+    if (-not (Tiene-Comando $nombre)) { return $false }
+    & $nombre --version *> $null
+    return ($LASTEXITCODE -eq 0)
+}
+
 function Instalar-Con-Winget($id, $nombre, $urlManual) {
     if (-not (Tiene-Comando 'winget')) {
         Write-Host ""
@@ -50,16 +59,25 @@ if (-not (Tiene-Comando 'git')) {
 }
 
 Write-Host "Comprobando Python..."
-if (-not (Tiene-Comando 'py') -and -not (Tiene-Comando 'python')) {
+# Se prueba "py" primero: es el lanzador oficial y no tiene el problema del alias falso
+# de WindowsApps (ese solo se llama python.exe / python3.exe).
+$pythonCmd = $null
+if (Python-Que-Funciona 'py') { $pythonCmd = 'py' }
+elseif (Python-Que-Funciona 'python') { $pythonCmd = 'python' }
+
+if (-not $pythonCmd) {
     Instalar-Con-Winget 'Python.Python.3.12' 'Python' 'https://www.python.org/downloads/'
+    Refrescar-Path
+    if (Python-Que-Funciona 'py') { $pythonCmd = 'py' }
+    elseif (Python-Que-Funciona 'python') { $pythonCmd = 'python' }
 }
-Refrescar-Path
-if (-not (Tiene-Comando 'py') -and -not (Tiene-Comando 'python')) {
+if (-not $pythonCmd) {
     Write-Host "Python se acaba de instalar pero esta ventana todavia no lo detecta."
-    Write-Host "Cierra esta ventana y haz doble clic en iniciar.bat otra vez."
+    Write-Host "Si el problema persiste, puede que el 'python.exe' de Microsoft Store este tapando"
+    Write-Host "al de verdad: en Configuracion > Aplicaciones > Alias de ejecucion de aplicaciones,"
+    Write-Host "desactiva 'python.exe' y 'python3.exe', y vuelve a hacer doble clic en iniciar.bat."
     exit 1
 }
-$pythonCmd = if (Tiene-Comando 'py') { 'py' } else { 'python' }
 
 if ((Tiene-Comando 'git') -and (Test-Path '.git')) {
     Write-Host "Buscando actualizaciones..."
