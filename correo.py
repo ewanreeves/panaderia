@@ -24,7 +24,7 @@ def ajustes_smtp():
     }
 
 
-def _horas_entre(entrada_iso, salida_iso):
+def horas_entre(entrada_iso, salida_iso):
     """Horas reales entre dos marcas ISO. Sin retoques: si no hay salida, se calcula hasta
     ahora y se marca como en curso — nunca se recorta ni se redondea al alza ni a la baja."""
     inicio = datetime.fromisoformat(entrada_iso)
@@ -44,7 +44,7 @@ def _fichajes_html(fichajes):
     filas = []
     total_horas = 0.0
     for f in fichajes:
-        horas, en_curso = _horas_entre(f["entrada"], f["salida"])
+        horas, en_curso = horas_entre(f["entrada"], f["salida"])
         total_horas += horas
         salida_txt = f["salida"][11:16] if f["salida"] else "— (sigue fichada)"
         filas.append(
@@ -226,7 +226,7 @@ def _hoja_fichajes(wb, fichajes):
     total = 0.0
     for f in fichajes:
         fila += 1
-        horas, en_curso = _horas_entre(f["entrada"], f["salida"])
+        horas, en_curso = horas_entre(f["entrada"], f["salida"])
         total += horas
         ws.cell(row=fila, column=1, value=f["empleada_nombre"])
         ws.cell(row=fila, column=2, value=f["entrada"])

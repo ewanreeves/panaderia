@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Horas de personal{% endblock %}
+{% block content %}
+<h1>Horas de personal</h1>
+<p class="ayuda">
+  <a href="{{ url_for('informes') }}">← Volver a Informes</a>
+</p>
+
+<form method="get" class="filtros">
+  <label>Desde <input type="date" name="desde" value="{{ fecha_desde }}"></label>
+  <label>Hasta <input type="date" name="hasta" value="{{ fecha_hasta }}"></label>
+  {% if empleadas %}
+  <label>Personal
+    <select name="empleada">
+      <option value="">Todas</option>
+      {% for e in empleadas %}
+      <option value="{{ e.id }}" {{ 'selected' if empleada_actual == e.id|string }}>{{ e.nombre }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% endif %}
+  <button type="submit">Filtrar</button>
+</form>
+
+{% if por_empleada %}
+<div class="totales">
+  {% for nombre, horas in por_empleada %}
+  <div class="tarjeta-total">
+    <div class="tarjeta-label">👤 {{ nombre }}</div>
+    <div class="tarjeta-valor">{{ '%.2f'|format(horas) }} h</div>
+  </div>
+  {% endfor %}
+  <div class="tarjeta-total tarjeta-general">
+    <div class="tarjeta-label">Total</div>
+    <div class="tarjeta-valor">{{ '%.2f'|format(total_general) }} h</div>
+  </div>
+</div>
+{% endif %}
+
+<h2>Detalle</h2>
+<div class="tabla-scroll">
+<table class="tabla">
+  <thead><tr><th>Personal</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Corrección</th><th></th></tr></thead>
+  <tbody>
+    {% for linea in filas %}
+    {% set f = linea.f %}
+    <tr>
+      <td>👤 {{ f.empleada_nombre }}</td>
+      <td>{{ f.entrada[:16].replace('T', ' ') }}</td>
+      <td>{{ f.salida[:16].replace('T', ' ') if f.salida else '— (sigue fichada)' }}</td>
+      <td>{{ '%.2f'|format(linea.horas) }} h{{ ' (en curso)' if linea.en_curso else '' }}</td>
+      <td>{% if f.editado_en %}<span class="badge badge-neutro" title="{{ f.editado_motivo }}">✏️ {{ f.editado_motivo }}</span>{% endif %}</td>
+      <td class="fila-acciones">
+        <a class="link" href="{{ url_for('fichaje_editar', fichaje_id=f.id) }}">corregir</a>
+        <form method="post" action="{{ url_for('fichaje_eliminar', fichaje_id=f.id) }}"
+          onsubmit="return confirm('¿Eliminar este fichaje?');">
+          <button type="submit" class="link-danger">eliminar</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="empty">Sin fichajes en este periodo</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Añadir fichaje olvidado</h2>
+<p class="ayuda">Para cuando a alguien se le olvidó fichar (entrada, salida, un descanso, una visita al médico...).
+  Queda guardado con el motivo, igual que una corrección.</p>
+{% if empleadas %}
+<form method="post" action="{{ url_for('fichaje_nuevo') }}" class="card fila-form fila-form-horas">
+  <label>Personal
+    <select name="empleada_id" required>
+      <option value="" selected disabled>— Selecciona —</option>
+      {% for e in empleadas %}
+      <option value="{{ e.id }}">{{ e.nombre }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Entrada
+    <input type="datetime-local" name="entrada" required>
+  </label>
+  <label>Salida
+    <input type="datetime-local" name="salida">
+  </label>
+  <label>Motivo
+    <input type="text" name="motivo" placeholder="ej. visita al médico, se le olvidó fichar..." required>
+  </label>
+  <button type="submit">Añadir</button>
+</form>
+{% else %}
+<p class="ayuda">Todavía no hay nadie dado de alta en Personal.</p>
+{% endif %}
+{% endblock %}

@@ -683,6 +683,104 @@ def informes_exportar():
     )
 
 
+# ---------- horas de personal (consulta + correcciones) ----------
+
+def _fichaje_a_datetime_local(valor):
+    """'2026-09-19T08:03:00' -> '2026-09-19T08:03' (lo que espera un <input type=datetime-local>)."""
+    return valor[:16] if valor else ""
+
+
+def _datetime_local_a_iso(valor):
+    """'2026-09-19T08:03' (del formulario) -> '2026-09-19T08:03:00' (lo que guarda la app)."""
+    if not valor:
+        return None
+    return valor if len(valor) > 16 else valor + ":00"
+
+
+@app.route("/informes/horas")
+@admin_required
+def informes_horas():
+    fecha_desde = request.args.get("desde") or date.today().replace(day=1).isoformat()
+    fecha_hasta = request.args.get("hasta") or date.today().isoformat()
+    empleada_id = request.args.get("empleada") or None
+
+    fichajes = db.fichajes_rango(f"{fecha_desde}T00:00:00", f"{fecha_hasta}T23:59:59", empleada_id)
+
+    por_empleada = {}
+    total_general = 0.0
+    filas = []
+    for f in fichajes:
+        horas, en_curso = correo.horas_entre(f["entrada"], f["salida"])
+        filas.append({"f": f, "horas": horas, "en_curso": en_curso})
+        total_general += horas
+        acumulado = por_empleada.setdefault(f["empleada_nombre"], 0.0)
+        por_empleada[f["empleada_nombre"]] = acumulado + horas
+
+    return render_template(
+        "horas.html",
+        filas=filas,
+        por_empleada=sorted(por_empleada.items()),
+        total_general=total_general,
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        empleada_actual=empleada_id,
+        empleadas=db.list_empleadas(),
+    )
+
+
+@app.route("/fichajes/nuevo", methods=["POST"])
+@admin_required
+def fichaje_nuevo():
+    empleada = db.get_empleada(request.form.get("empleada_id"))
+    entrada = _datetime_local_a_iso(request.form.get("entrada"))
+    salida = _datetime_local_a_iso(request.form.get("salida"))
+    motivo = request.form.get("motivo", "").strip()
+
+    if not empleada or not entrada or not motivo:
+        flash("Faltan datos: personal, hora de entrada y motivo de la corrección son obligatorios")
+        return redirect(url_for("informes_horas"))
+    if salida and salida < entrada:
+        flash("La salida no puede ser antes que la entrada")
+        return redirect(url_for("informes_horas"))
+
+    db.insert_fichaje_manual(empleada["id"], empleada["nombre"], entrada, salida, motivo)
+    flash(f'Fichaje añadido a mano para {empleada["nombre"]}')
+    return redirect(url_for("informes_horas"))
+
+
+@app.route("/fichajes/<int:fichaje_id>/editar", methods=["GET", "POST"])
+@admin_required
+def fichaje_editar(fichaje_id):
+    fichaje = db.get_fichaje(fichaje_id)
+    if not fichaje:
+        abort(404)
+    if request.method == "POST":
+        entrada = _datetime_local_a_iso(request.form.get("entrada"))
+        salida = _datetime_local_a_iso(request.form.get("salida"))
+        motivo = request.form.get("motivo", "").strip()
+        if not entrada or not motivo:
+            flash("La hora de entrada y el motivo de la corrección son obligatorios")
+            return redirect(url_for("fichaje_editar", fichaje_id=fichaje_id))
+        if salida and salida < entrada:
+            flash("La salida no puede ser antes que la entrada")
+            return redirect(url_for("fichaje_editar", fichaje_id=fichaje_id))
+        db.update_fichaje(fichaje_id, entrada, salida, motivo)
+        flash(f'Fichaje de {fichaje["empleada_nombre"]} corregido')
+        return redirect(url_for("informes_horas"))
+    return render_template("fichaje_editar.html", f=fichaje)
+
+
+@app.route("/fichajes/<int:fichaje_id>/eliminar", methods=["POST"])
+@admin_required
+def fichaje_eliminar(fichaje_id):
+    fichaje = db.get_fichaje(fichaje_id)
+    if not fichaje:
+        abort(404)
+    db.delete_fichaje(fichaje_id)
+    flash(f'Fichaje de {fichaje["empleada_nombre"]} eliminado')
+    return redirect(url_for("informes_horas"))
+
+
 # ---------- configuración ----------
 
 @app.route("/configuracion", methods=["GET", "POST"])

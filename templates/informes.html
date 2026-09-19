@@ -26,6 +26,7 @@
   {% endif %}
   <button type="submit">Filtrar</button>
   <a class="boton-secundario" href="{{ url_for('informes_exportar', desde=fecha_desde, hasta=fecha_hasta, tipo=tipo_actual, empleada=empleada_actual) }}">Exportar CSV</a>
+  <a class="boton-secundario" href="{{ url_for('informes_horas') }}">🕒 Horas de personal</a>
 </form>
 
 {% if total_general > 0 %}

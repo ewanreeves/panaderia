@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Corregir fichaje{% endblock %}
+{% block content %}
+<h1>Corregir fichaje</h1>
+<p class="ayuda">{{ f.empleada_nombre }}
+  {% if f.editado_en %}<br><span class="badge badge-neutro">✏️ ya corregido antes: {{ f.editado_motivo }}</span>{% endif %}
+</p>
+<form method="post" class="card">
+  <div class="fila">
+    <label>Entrada
+      <input type="datetime-local" name="entrada" value="{{ f.entrada[:16] }}" required>
+    </label>
+    <label>Salida
+      <input type="datetime-local" name="salida" value="{{ f.salida[:16] if f.salida else '' }}">
+    </label>
+  </div>
+  <label>Motivo de la corrección
+    <input type="text" name="motivo" placeholder="ej. se le olvidó fichar la salida, visita al médico, descanso no marcado..." required>
+  </label>
+  <p class="ayuda">Deja la salida vacía si sigue fichada. El motivo queda guardado junto con la fecha de la corrección.</p>
+  <button type="submit">Guardar corrección</button>
+  <a class="boton-secundario" href="{{ url_for('informes_horas') }}">Cancelar</a>
+</form>
+{% endblock %}

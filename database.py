@@ -136,6 +136,11 @@ def init_db():
         conn.execute("ALTER TABLE empleadas ADD COLUMN dni TEXT")
     if "horas_semanales" not in columnas_emp:
         conn.execute("ALTER TABLE empleadas ADD COLUMN horas_semanales REAL")
+    columnas_fichajes = [r["name"] for r in conn.execute("PRAGMA table_info(fichajes)").fetchall()]
+    if "editado_motivo" not in columnas_fichajes:
+        conn.execute("ALTER TABLE fichajes ADD COLUMN editado_motivo TEXT")
+    if "editado_en" not in columnas_fichajes:
+        conn.execute("ALTER TABLE fichajes ADD COLUMN editado_en TEXT")
     # "Invitación" se eliminó como tipo — los movimientos antiguos pasan a "errores".
     conn.execute("UPDATE movimientos SET tipo='errores' WHERE tipo='invitacion'")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_movimientos_lote ON movimientos(lote)")
@@ -605,11 +610,57 @@ def fichajes_del_turno(abierto_en, hasta=None):
     return rows
 
 
-def fichajes_rango(desde_iso, hasta_iso):
+def fichajes_rango(desde_iso, hasta_iso, empleada_id=None):
     conn = get_db()
-    rows = conn.execute(
-        "SELECT * FROM fichajes WHERE entrada >= ? AND entrada <= ? ORDER BY entrada ASC",
-        (desde_iso, hasta_iso),
-    ).fetchall()
+    q = "SELECT * FROM fichajes WHERE entrada >= ? AND entrada <= ?"
+    params = [desde_iso, hasta_iso]
+    if empleada_id:
+        q += " AND empleada_id = ?"
+        params.append(empleada_id)
+    q += " ORDER BY entrada ASC"
+    rows = conn.execute(q, params).fetchall()
     conn.close()
     return rows
+
+
+def get_fichaje(fichaje_id):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM fichajes WHERE id = ?", (fichaje_id,)).fetchone()
+    conn.close()
+    return row
+
+
+def insert_fichaje_manual(empleada_id, empleada_nombre, entrada_iso, salida_iso, motivo):
+    """Alta manual de un fichaje olvidado (ej. se le pasó fichar la entrada). Queda marcado como
+    corrección, con el motivo, para que el registro siga siendo transparente."""
+    conn = get_db()
+    cur = conn.execute(
+        """INSERT INTO fichajes (empleada_id, empleada_nombre, entrada, salida, editado_motivo, editado_en)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (empleada_id, empleada_nombre, entrada_iso, salida_iso, motivo,
+         datetime.now().isoformat(timespec="seconds")),
+    )
+    conn.commit()
+    new_id = cur.lastrowid
+    conn.close()
+    return new_id
+
+
+def update_fichaje(fichaje_id, entrada_iso, salida_iso, motivo):
+    """Corrige entrada/salida de un fichaje ya existente (ej. no marcó un descanso o fue al
+    médico). El motivo queda guardado junto con la fecha de la corrección — no se sobrescribe
+    en silencio."""
+    conn = get_db()
+    conn.execute(
+        "UPDATE fichajes SET entrada=?, salida=?, editado_motivo=?, editado_en=? WHERE id=?",
+        (entrada_iso, salida_iso, motivo, datetime.now().isoformat(timespec="seconds"), fichaje_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_fichaje(fichaje_id):
+    conn = get_db()
+    conn.execute("DELETE FROM fichajes WHERE id = ?", (fichaje_id,))
+    conn.commit()
+    conn.close()

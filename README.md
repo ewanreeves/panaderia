@@ -62,7 +62,14 @@ y unos días de movimientos de ejemplo. No lo ejecutes sobre datos reales de la 
    ajusta a la jornada de contrato bajo ningún concepto, ni aunque se pasen de las horas pactadas: el
    registro horario tiene que reflejar la realidad, es obligatorio por ley (RD-ley 8/2019).
 6. **Informes** (solo Cristina): totales por tipo, producto, personal y turno en un rango de fechas, con
-   exportación a CSV para pasarlo a la gestoría si hace falta.
+   exportación a CSV para pasarlo a la gestoría si hace falta. Desde ahí, el botón "🕒 Horas de personal"
+   lleva al detalle de fichajes de cada trabajadora en el rango elegido, con el total de horas por
+   persona. Cristina puede **corregir** un fichaje (por ejemplo, si alguien no marcó un descanso o fue
+   al médico y se le olvidó fichar) o **añadir uno a mano** si se le olvidó fichar del todo — en ambos
+   casos hay que indicar el motivo de la corrección, que queda guardado junto con la fecha en que se
+   hizo. Esto son correcciones de la realidad (algo que de verdad pasó y no se marcó bien), no un ajuste
+   para que las horas cuadren con el contrato — eso seguiría sin reflejar lo que ha trabajado cada
+   persona, que es justo lo que exige la ley.
 7. **Configuración** (solo Cristina): correo de destino para los cierres de turno, cuenta de correo
    remitente (con contraseña de aplicación de Gmail), carpeta de copia de seguridad y cambio de su
    propia contraseña.
