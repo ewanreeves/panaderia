@@ -58,6 +58,24 @@ if (-not (Tiene-Comando 'git')) {
     Instalar-Con-Winget 'Git.Git' 'Git' 'https://git-scm.com/download/win'
 }
 
+if ((Tiene-Comando 'git') -and (Test-Path '.git')) {
+    Write-Host "Buscando actualizaciones..."
+    $commitAntes = git rev-parse HEAD
+    # Sin credenciales guardadas, git intentaria pedir usuario/contrasena. Esto hace que
+    # falle rapido en vez de quedarse colgado esperando un login que nadie va a rellenar.
+    $env:GIT_TERMINAL_PROMPT = '0'
+    git pull --ff-only
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "No se ha podido buscar actualizaciones (sin internet o sin acceso al repositorio). Sigo con el codigo que ya hay."
+    } elseif ((git rev-parse HEAD) -ne $commitAntes) {
+        # Si el pull trae un setup.ps1 nuevo, esta misma ejecucion sigue con la version
+        # VIEJA cargada en memoria. Se reinicia entero para usar ya el codigo actualizado.
+        Write-Host "Hay una version nueva. Reiniciando con el codigo actualizado..."
+        & powershell -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath
+        exit $LASTEXITCODE
+    }
+}
+
 Write-Host "Comprobando Python..."
 # Se prueba "py" primero: es el lanzador oficial y no tiene el problema del alias falso
 # de WindowsApps (ese solo se llama python.exe / python3.exe).
@@ -77,17 +95,6 @@ if (-not $pythonCmd) {
     Write-Host "al de verdad: en Configuracion > Aplicaciones > Alias de ejecucion de aplicaciones,"
     Write-Host "desactiva 'python.exe' y 'python3.exe', y vuelve a hacer doble clic en iniciar.bat."
     exit 1
-}
-
-if ((Tiene-Comando 'git') -and (Test-Path '.git')) {
-    Write-Host "Buscando actualizaciones..."
-    # Sin credenciales guardadas, git intentaria pedir usuario/contrasena. Esto hace que
-    # falle rapido en vez de quedarse colgado esperando un login que nadie va a rellenar.
-    $env:GIT_TERMINAL_PROMPT = '0'
-    git pull --ff-only
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "No se ha podido buscar actualizaciones (sin internet o sin acceso al repositorio). Sigo con el codigo que ya hay."
-    }
 }
 
 # El venv puede venir roto si la carpeta se copio de otro PC (Python estaba en otra ruta)
