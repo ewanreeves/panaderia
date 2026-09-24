@@ -143,12 +143,15 @@
     <label class="campo-pequeno">Quién registra
       <select name="empleada_id" id="f-empleada" required>
         <option value="" selected disabled>— Selecciona quién eres —</option>
-        {% for e in empleadas %}
+        {% for e in empleadas if e.id in ids_fichadas %}
         <option value="{{ e.id }}">{{ e.nombre }}</option>
         {% endfor %}
         <option value="admin">{{ admin_nombre }}</option>
       </select>
     </label>
+    {% if empleadas and not (empleadas|selectattr('id', 'in', ids_fichadas)|list) %}
+    <p class="ayuda">Nadie del personal ha fichado entrada todavía — que fichen arriba antes de registrar.</p>
+    {% endif %}
 
     <label class="campo-pequeno">Turno</label>
     <div class="turno-botones">

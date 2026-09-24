@@ -410,6 +410,9 @@ def registro():
             if not empleada:
                 flash("Selecciona quién registra el ticket")
                 return redirect(url_for("registro"))
+            if not db.get_fichaje_abierto(empleada["id"]):
+                flash(f'{empleada["nombre"]} no puede registrar sin haber fichado entrada')
+                return redirect(url_for("registro"))
             empleada_id_db = empleada["id"]
             empleada_nombre = empleada["nombre"]
 

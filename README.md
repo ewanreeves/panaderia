@@ -45,9 +45,11 @@ y unos días de movimientos de ejemplo. No lo ejecutes sobre datos reales de la 
    (en el paso de importación puedes indicar qué columna es el nombre, precio, coste, etc.).
 2. **Registrar**: pantalla tipo TPV — se van tocando los productos de la carta (pueden ser varios, de
    categorías distintas) para montar un ticket, se elige el tipo (merma/reciclaje/autoconsumo/errores),
-   quién lo registra (obligatorio: todo el personal dado de alta, más Cristina al final de la lista) y
-   el turno (mañana/tarde), y se registra de una vez. El valor se calcula solo a partir del coste/precio
-   del producto.
+   quién lo registra (obligatorio) y el turno (mañana/tarde), y se registra de una vez. El valor se
+   calcula solo a partir del coste/precio del producto. En el desplegable de "quién lo registra" solo
+   aparece el personal que **ha fichado entrada** en ese momento (más Cristina, que no necesita fichar)
+   — quien no ha fichado no puede registrar nada, ni saltándose el desplegable: la app lo comprueba
+   también al guardar, no solo en la pantalla.
 3. **Turno (apertura/cierre de caja)**: arriba del todo en Registrar. Es independiente de la hora — se
    puede cerrar y abrir caja las veces que haga falta en un día. Al **cerrar turno**:
    - se envía un correo (con un Excel adjunto con todos los movimientos, más una pestaña con las horas
@@ -59,8 +61,8 @@ y unos días de movimientos de ejemplo. No lo ejecutes sobre datos reales de la 
    Mientras el turno está cerrado no se pueden registrar tickets, hay que pulsar "Abrir turno" primero.
    El total de Errores acumulado en el turno actual se ve en la burbuja junto al estado del turno.
 4. **Personal** (solo Cristina): da de alta aquí a las dependientas — nombre, apellidos, DNI y horas de
-   jornada semanal. En cuanto exista una persona, aparece en el desplegable de Registrar y en el de
-   Fichar.
+   jornada semanal. En cuanto exista una persona, aparece en el desplegable de Fichar (y en el de
+   Registrar, una vez que fiche entrada — ver más abajo).
 5. **Fichar** (en Registrar, arriba de la carta): desplegable con todo el personal activo y dos
    botones, "Fichar entrada" y "Fichar salida". Se ve quién está fichada ahora mismo con la hora de
    entrada. Las horas que queden registradas son siempre las reales — la app no las redondea ni las
