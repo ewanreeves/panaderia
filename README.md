@@ -73,9 +73,10 @@ y unos días de movimientos de ejemplo. No lo ejecutes sobre datos reales de la 
 6. **Stock** (menú superior, Cristina y personal): el stock con el que se abre la tienda, contado y
    anotado a mano por producto (solo se guardan las casillas que se rellenan; hay buscador y filtro por
    categoría). Igual que en Registrar, quien anota tiene que haber fichado entrada (Cristina no). Cada
-   **merma, reciclaje o autoconsumo** que se registre descuenta solo ese stock (los errores de caja no,
-   porque no es producto que se haya perdido); si se borra el ticket, el stock se recupera. Solo se
-   descuenta de los productos que se han contado hoy. El stock se queda así todo el día aunque haya uno
+   **merma, reciclaje, autoconsumo o error** que se registre descuenta solo ese stock (los errores
+   también: es producto que se ha perdido); si se borra el ticket, el stock se recupera. Solo se
+   descuenta de los productos que se han contado hoy, y puede quedar en negativo (se ve en rojo: señal
+   de que algo no cuadra). El stock se queda así todo el día aunque haya uno
    o dos cierres, salvo que se cambie a mano (queda como "ajuste"), y **al día siguiente vuelve a 0**:
    hay que volver a meterlo por la mañana. En Registrar cada ficha muestra el stock que queda. Los
    cambios de días anteriores se conservan en la base de datos.

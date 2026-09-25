@@ -697,7 +697,7 @@ def delete_fichaje(fichaje_id):
 # ninguna tarea de "reinicio": hay que volver a meterlo a mano por la mañana. Los cambios
 # de días anteriores se conservan como histórico.
 
-TIPOS_STOCK_DESCUENTAN = ("merma", "reciclaje", "autoconsumo")
+TIPOS_STOCK_DESCUENTAN = TIPOS
 
 
 def stock_actual(fecha):
@@ -779,7 +779,7 @@ def stock_resumen_dia(fecha):
     for m in stock_movimientos_dia(fecha):
         r = resumen.setdefault(m["producto_id"], {
             "producto_id": m["producto_id"], "producto_nombre": m["producto_nombre"],
-            "inicial": 0.0, "ajustes": 0.0, "merma": 0.0, "reciclaje": 0.0, "autoconsumo": 0.0,
+            "inicial": 0.0, "ajustes": 0.0, "merma": 0.0, "reciclaje": 0.0, "autoconsumo": 0.0, "errores": 0.0,
             "actual": 0.0,
         })
         if m["tipo"] == "inicial":

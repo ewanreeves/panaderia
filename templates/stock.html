@@ -3,9 +3,9 @@
 {% block content %}
 <h1>Stock del día</h1>
 <p class="ayuda">
-  Cuenta lo que hay al abrir la tienda y anótalo aquí. Se va descontando solo con cada merma, reciclaje
-  o autoconsumo que se registre, y se queda así todo el día salvo que lo cambies a mano. Mañana
-  empieza otra vez en 0: hay que volver a meterlo por la mañana. Los errores de caja no descuentan stock.
+  Cuenta lo que hay al abrir la tienda y anótalo aquí. Se va descontando solo con cada merma, reciclaje,
+  autoconsumo o error que se registre, y se queda así todo el día salvo que lo cambies a mano. Mañana
+  empieza otra vez en 0: hay que volver a meterlo por la mañana. Los errores de caja también descuentan.
 </p>
 
 <form method="post" action="{{ url_for('stock_guardar') }}" class="card" id="stock-form">
@@ -68,7 +68,7 @@
     <tr>
       <td>{{ m.creado[11:16] }}</td>
       <td>{{ m.producto_nombre }}</td>
-      <td>{{ {'inicial': 'Stock inicial', 'ajuste': 'Ajuste a mano', 'merma': '🗑️ Merma', 'reciclaje': '♻️ Reciclaje', 'autoconsumo': '🍽️ Autoconsumo'}.get(m.tipo, m.tipo) }}</td>
+      <td>{{ {'inicial': 'Stock inicial', 'ajuste': 'Ajuste a mano', 'merma': '🗑️ Merma', 'reciclaje': '♻️ Reciclaje', 'autoconsumo': '🍽️ Autoconsumo', 'errores': '🗯️ Errores'}.get(m.tipo, m.tipo) }}</td>
       <td>{{ ('+' if m.delta > 0 else '') ~ (m.delta|cant) }}</td>
       <td>{{ m.resultante|cant }}</td>
       <td>{{ m.empleada_nombre or '' }}</td>

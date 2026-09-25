@@ -70,7 +70,7 @@ def _stock_html(stock):
         return "<p><i>Hoy no se ha declarado stock.</i></p>"
     filas = "".join(
         f"<tr><td>{r['producto_nombre']}</td><td>{_num(r['inicial'])}</td><td>{_num(r['ajustes'])}</td>"
-        f"<td>{_num(r['merma'])}</td><td>{_num(r['reciclaje'])}</td><td>{_num(r['autoconsumo'])}</td>"
+        f"<td>{_num(r['merma'])}</td><td>{_num(r['reciclaje'])}</td><td>{_num(r['autoconsumo'])}</td><td>{_num(r['errores'])}</td>"
         f"<td><b>{_num(r['actual'])}</b></td></tr>"
         for r in stock["resumen"]
     )
@@ -84,7 +84,7 @@ def _stock_html(stock):
     <p>Stock del día {stock['fecha']} (mañana empieza otra vez en 0):</p>
     <table border="1" cellpadding="4" cellspacing="0">
       <tr><th>Producto</th><th>Inicial</th><th>Ajustes a mano</th><th>Merma</th><th>Reciclaje</th>
-          <th>Autoconsumo</th><th>Stock ahora</th></tr>
+          <th>Autoconsumo</th><th>Errores</th><th>Stock ahora</th></tr>
       {filas}
     </table>
     <p>Todos los movimientos de stock del día:</p>
@@ -101,6 +101,7 @@ STOCK_TIPO_LABELS = {
     "merma": "Merma",
     "reciclaje": "Reciclaje",
     "autoconsumo": "Autoconsumo",
+    "errores": "Errores",
 }
 
 
@@ -290,17 +291,17 @@ def _hoja_fichajes(wb, fichajes):
 
 def _hoja_stock(wb, stock):
     ws = wb.create_sheet("Stock")
-    _cabecera(ws, 1, ["Producto", "Inicial", "Ajustes a mano", "Merma", "Reciclaje", "Autoconsumo", "Stock ahora"])
+    _cabecera(ws, 1, ["Producto", "Inicial", "Ajustes a mano", "Merma", "Reciclaje", "Autoconsumo", "Errores", "Stock ahora"])
     ws.freeze_panes = "A2"
     resumen = stock["resumen"] if stock else []
     for fila, r in enumerate(resumen, start=2):
         ws.cell(row=fila, column=1, value=r["producto_nombre"])
-        for col, clave in enumerate(["inicial", "ajustes", "merma", "reciclaje", "autoconsumo", "actual"], start=2):
+        for col, clave in enumerate(["inicial", "ajustes", "merma", "reciclaje", "autoconsumo", "errores", "actual"], start=2):
             ws.cell(row=fila, column=col, value=r[clave])
-        ws.cell(row=fila, column=7).font = Font(bold=True)
+        ws.cell(row=fila, column=8).font = Font(bold=True)
     if not resumen:
         ws.cell(row=2, column=1, value="Hoy no se ha declarado stock").font = Font(italic=True)
-    _autoajustar(ws, [30, 10, 16, 10, 12, 14, 12])
+    _autoajustar(ws, [30, 10, 16, 10, 12, 14, 10, 12])
 
     ws2 = wb.create_sheet("Stock - movimientos")
     _cabecera(ws2, 1, ["Fecha", "Hora", "Producto", "Tipo", "Cambio", "Resultado", "Personal"])
