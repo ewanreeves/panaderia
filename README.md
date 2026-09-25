@@ -22,7 +22,7 @@ venv\Scripts\python.exe app.py
 Abre http://127.0.0.1:5000. Hay dos formas de entrar:
 
 - **Caja**: un único botón compartido, sin contraseña, para cualquiera del personal. Solo puede
-  registrar tickets y fichar entrada/salida — no puede entrar a Productos, Personal, Informes ni
+  registrar tickets, anotar el stock y fichar entrada/salida — no puede entrar a Productos, Personal, Informes ni
   Configuración (si prueba la URL directamente, la app le redirige a Registrar). Como el login ya
   no identifica a la persona, el desplegable "Quién registra" de cada ticket es obligatorio: hay
   que elegir el nombre siempre, no se puede enviar el formulario sin seleccionarlo.
@@ -53,8 +53,10 @@ y unos días de movimientos de ejemplo. No lo ejecutes sobre datos reales de la 
 3. **Turno (apertura/cierre de caja)**: arriba del todo en Registrar. Es independiente de la hora — se
    puede cerrar y abrir caja las veces que haga falta en un día. Al **cerrar turno**:
    - se envía un correo (con un Excel adjunto con todos los movimientos, más una pestaña con las horas
-     de entrada y salida del personal que ha estado fichado durante el turno) con el informe de todo lo
-     registrado desde la apertura, al correo configurado en **Configuración**;
+     de entrada y salida del personal que ha estado fichado durante el turno, y dos con el stock del
+     día: resumen por producto y todos los movimientos de stock) con el informe de todo lo registrado
+     desde la apertura, al correo configurado en **Configuración**. Si hay dos cierres el mismo día,
+     el segundo trae el stock acumulado de todo el día;
    - los movimientos de tipo **Errores** de ese turno se BORRAN por completo (no quedan en Informes,
      pero sí quedan en ese Excel — es el único registro que sobrevive de ellos);
    - el resto (merma, reciclaje, autoconsumo) queda guardado como siempre.
@@ -68,7 +70,16 @@ y unos días de movimientos de ejemplo. No lo ejecutes sobre datos reales de la 
    entrada. Las horas que queden registradas son siempre las reales — la app no las redondea ni las
    ajusta a la jornada de contrato bajo ningún concepto, ni aunque se pasen de las horas pactadas: el
    registro horario tiene que reflejar la realidad, es obligatorio por ley (RD-ley 8/2019).
-6. **Informes** (solo Cristina): totales por tipo, producto, personal y turno en un rango de fechas, con
+6. **Stock** (menú superior, Cristina y personal): el stock con el que se abre la tienda, contado y
+   anotado a mano por producto (solo se guardan las casillas que se rellenan; hay buscador y filtro por
+   categoría). Igual que en Registrar, quien anota tiene que haber fichado entrada (Cristina no). Cada
+   **merma, reciclaje o autoconsumo** que se registre descuenta solo ese stock (los errores de caja no,
+   porque no es producto que se haya perdido); si se borra el ticket, el stock se recupera. Solo se
+   descuenta de los productos que se han contado hoy. El stock se queda así todo el día aunque haya uno
+   o dos cierres, salvo que se cambie a mano (queda como "ajuste"), y **al día siguiente vuelve a 0**:
+   hay que volver a meterlo por la mañana. En Registrar cada ficha muestra el stock que queda. Los
+   cambios de días anteriores se conservan en la base de datos.
+7. **Informes** (solo Cristina): totales por tipo, producto, personal y turno en un rango de fechas, con
    exportación a CSV para pasarlo a la gestoría si hace falta. Desde ahí, el botón "🕒 Horas de personal"
    lleva al detalle de fichajes de cada trabajadora en el rango elegido, con el total de horas por
    persona. Cristina puede **corregir** un fichaje (por ejemplo, si alguien no marcó un descanso o fue
@@ -77,10 +88,10 @@ y unos días de movimientos de ejemplo. No lo ejecutes sobre datos reales de la 
    hizo. Esto son correcciones de la realidad (algo que de verdad pasó y no se marcó bien), no un ajuste
    para que las horas cuadren con el contrato — eso seguiría sin reflejar lo que ha trabajado cada
    persona, que es justo lo que exige la ley.
-7. **Configuración** (solo Cristina): correo de destino para los cierres de turno, cuenta de correo
+8. **Configuración** (solo Cristina): correo de destino para los cierres de turno, cuenta de correo
    remitente (con contraseña de aplicación de Gmail) y cambio de su propia contraseña. También explica
    la copia de seguridad automática (ver más abajo) y tiene un botón para **borrar los datos de
-   demo** (movimientos, fichajes, turnos y personal — no toca productos ni esta configuración), pensado
+   demo** (movimientos, stock, fichajes, turnos y personal — no toca productos ni esta configuración), pensado
    para dejar la app limpia justo antes de que la clienta empiece a usarla de verdad. Pide escribir
    "BORRAR" y confirmar aparte, y hace una copia de seguridad justo antes de borrar.
 

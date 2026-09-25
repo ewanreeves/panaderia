@@ -60,7 +60,51 @@ def _fichajes_html(fichajes):
     """
 
 
-def construir_informe_html(turno, movimientos, totales_tipo, admin_nombre, fichajes=None):
+def _num(valor):
+    texto = f"{valor:.2f}".rstrip("0").rstrip(".")
+    return texto.replace(".", ",") if texto not in ("", "-0") else "0"
+
+
+def _stock_html(stock):
+    if not stock or not stock["movimientos"]:
+        return "<p><i>Hoy no se ha declarado stock.</i></p>"
+    filas = "".join(
+        f"<tr><td>{r['producto_nombre']}</td><td>{_num(r['inicial'])}</td><td>{_num(r['ajustes'])}</td>"
+        f"<td>{_num(r['merma'])}</td><td>{_num(r['reciclaje'])}</td><td>{_num(r['autoconsumo'])}</td>"
+        f"<td><b>{_num(r['actual'])}</b></td></tr>"
+        for r in stock["resumen"]
+    )
+    detalle = "".join(
+        f"<tr><td>{m['creado'][11:16]}</td><td>{m['producto_nombre']}</td>"
+        f"<td>{STOCK_TIPO_LABELS.get(m['tipo'], m['tipo'])}</td><td>{_num(m['delta'])}</td>"
+        f"<td>{_num(m['resultante'])}</td><td>{m['empleada_nombre'] or ''}</td></tr>"
+        for m in stock["movimientos"]
+    )
+    return f"""
+    <p>Stock del día {stock['fecha']} (mañana empieza otra vez en 0):</p>
+    <table border="1" cellpadding="4" cellspacing="0">
+      <tr><th>Producto</th><th>Inicial</th><th>Ajustes a mano</th><th>Merma</th><th>Reciclaje</th>
+          <th>Autoconsumo</th><th>Stock ahora</th></tr>
+      {filas}
+    </table>
+    <p>Todos los movimientos de stock del día:</p>
+    <table border="1" cellpadding="4" cellspacing="0">
+      <tr><th>Hora</th><th>Producto</th><th>Tipo</th><th>Cambio</th><th>Resultado</th><th>Personal</th></tr>
+      {detalle}
+    </table>
+    """
+
+
+STOCK_TIPO_LABELS = {
+    "inicial": "Stock inicial",
+    "ajuste": "Ajuste a mano",
+    "merma": "Merma",
+    "reciclaje": "Reciclaje",
+    "autoconsumo": "Autoconsumo",
+}
+
+
+def construir_informe_html(turno, movimientos, totales_tipo, admin_nombre, fichajes=None, stock=None):
     filas = "".join(
         f"<tr><td>{m['fecha']}</td><td>{db.TIPO_LABELS.get(m['tipo'], m['tipo'])}</td>"
         f"<td>{m['producto_nombre']}</td><td>{m['cantidad']}</td>"
@@ -82,6 +126,9 @@ def construir_informe_html(turno, movimientos, totales_tipo, admin_nombre, ficha
     <p>Se adjunta el detalle completo en Excel.</p>
     <h3>Personal — entrada y salida</h3>
     {_fichajes_html(fichajes or [])}
+    <h3>Stock</h3>
+    {_stock_html(stock)}
+    <h3>Movimientos del turno</h3>
     <table border="1" cellpadding="4" cellspacing="0">
       <tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th>Cant.</th><th>Valor</th><th>Personal</th><th>Motivo</th></tr>
       {filas}
@@ -241,6 +288,37 @@ def _hoja_fichajes(wb, fichajes):
     _autoajustar(ws, [22, 20, 20, 18])
 
 
+def _hoja_stock(wb, stock):
+    ws = wb.create_sheet("Stock")
+    _cabecera(ws, 1, ["Producto", "Inicial", "Ajustes a mano", "Merma", "Reciclaje", "Autoconsumo", "Stock ahora"])
+    ws.freeze_panes = "A2"
+    resumen = stock["resumen"] if stock else []
+    for fila, r in enumerate(resumen, start=2):
+        ws.cell(row=fila, column=1, value=r["producto_nombre"])
+        for col, clave in enumerate(["inicial", "ajustes", "merma", "reciclaje", "autoconsumo", "actual"], start=2):
+            ws.cell(row=fila, column=col, value=r[clave])
+        ws.cell(row=fila, column=7).font = Font(bold=True)
+    if not resumen:
+        ws.cell(row=2, column=1, value="Hoy no se ha declarado stock").font = Font(italic=True)
+    _autoajustar(ws, [30, 10, 16, 10, 12, 14, 12])
+
+    ws2 = wb.create_sheet("Stock - movimientos")
+    _cabecera(ws2, 1, ["Fecha", "Hora", "Producto", "Tipo", "Cambio", "Resultado", "Personal"])
+    ws2.freeze_panes = "A2"
+    movimientos = stock["movimientos"] if stock else []
+    for fila, m in enumerate(movimientos, start=2):
+        ws2.cell(row=fila, column=1, value=m["fecha"])
+        ws2.cell(row=fila, column=2, value=m["creado"][11:16])
+        ws2.cell(row=fila, column=3, value=m["producto_nombre"])
+        ws2.cell(row=fila, column=4, value=STOCK_TIPO_LABELS.get(m["tipo"], m["tipo"]))
+        ws2.cell(row=fila, column=5, value=m["delta"])
+        ws2.cell(row=fila, column=6, value=m["resultante"])
+        ws2.cell(row=fila, column=7, value=m["empleada_nombre"] or "")
+    if not movimientos:
+        ws2.cell(row=2, column=1, value="Hoy no se ha declarado stock").font = Font(italic=True)
+    _autoajustar(ws2, [12, 8, 30, 16, 10, 12, 16])
+
+
 def _hoja_todo(wb, movimientos):
     ws = wb.create_sheet("Detalle completo")
     cabeceras = ["Fecha", "Concepto", "Producto", "Cantidad", "Valorado a", "Valor unitario",
@@ -263,13 +341,15 @@ def _hoja_todo(wb, movimientos):
     _autoajustar(ws, [12, 14, 30, 10, 15, 14, 14, 16, 10, 30])
 
 
-def construir_excel_informe(turno, movimientos, totales_tipo, admin_nombre, fichajes=None):
-    """Devuelve un BytesIO con el .xlsx: resumen, horas del personal, una pestaña por concepto
-    (con su subtotal), agregados por producto y por personal, y el detalle completo cronológico.
-    Es el único registro que queda de los movimientos de "Errores" una vez cerrado el turno."""
+def construir_excel_informe(turno, movimientos, totales_tipo, admin_nombre, fichajes=None, stock=None):
+    """Devuelve un BytesIO con el .xlsx: resumen, horas del personal, stock del día, una pestaña
+    por concepto (con su subtotal), agregados por producto y por personal, y el detalle completo
+    cronológico. Es el único registro que queda de los movimientos de "Errores" una vez cerrado
+    el turno."""
     wb = Workbook()
     _hoja_resumen(wb, turno, totales_tipo, admin_nombre)
     _hoja_fichajes(wb, fichajes or [])
+    _hoja_stock(wb, stock)
 
     # "Errores" primero: es el único concepto que desaparece de la app tras el cierre.
     orden_tipos = ["errores"] + [t for t in db.TIPOS if t != "errores"]
@@ -291,7 +371,7 @@ def construir_excel_informe(turno, movimientos, totales_tipo, admin_nombre, fich
     return buffer
 
 
-def enviar_informe_turno(turno, movimientos, totales_tipo, admin_nombre, fichajes=None):
+def enviar_informe_turno(turno, movimientos, totales_tipo, admin_nombre, fichajes=None, stock=None):
     """Devuelve (ok, mensaje). No lanza excepción: si falla el envío, el cierre debe continuar igualmente."""
     ajustes = ajustes_smtp()
     if not ajustes["user"] or not ajustes["password"]:
@@ -301,8 +381,8 @@ def enviar_informe_turno(turno, movimientos, totales_tipo, admin_nombre, fichaje
 
     destinatarios = [d.strip() for d in ajustes["destino"].split(",") if d.strip()]
 
-    html = construir_informe_html(turno, movimientos, totales_tipo, admin_nombre, fichajes)
-    excel = construir_excel_informe(turno, movimientos, totales_tipo, admin_nombre, fichajes)
+    html = construir_informe_html(turno, movimientos, totales_tipo, admin_nombre, fichajes, stock)
+    excel = construir_excel_informe(turno, movimientos, totales_tipo, admin_nombre, fichajes, stock)
 
     msg = MIMEMultipart()
     msg["Subject"] = f"Cierre de turno {turno['cerrado_en']}"

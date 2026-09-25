@@ -30,6 +30,31 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 db.init_db()
 
 
+@app.template_filter("cant")
+def filtro_cantidad(valor):
+    """5.0 -> '5', 2.5 -> '2,5' (sin decimales sobrantes y con coma)."""
+    if valor is None:
+        return ""
+    texto = f"{valor:.2f}".rstrip("0").rstrip(".")
+    return texto.replace(".", ",") if texto not in ("", "-0") else "0"
+
+
+def _quien_registra(seleccion):
+    """Valida quién hace una anotación (ticket, stock...). Devuelve ((id, nombre), None) o
+    (None, mensaje_de_error). El personal solo puede anotar si tiene la entrada fichada;
+    Cristina ("admin") no necesita fichar."""
+    if not seleccion:
+        return None, "Selecciona quién registra"
+    if seleccion == "admin":
+        return (None, config.ADMIN_NOMBRE), None
+    empleada = db.get_empleada(seleccion)
+    if not empleada:
+        return None, "Selecciona quién registra"
+    if not db.get_fichaje_abierto(empleada["id"]):
+        return None, f'{empleada["nombre"]} no puede registrar sin haber fichado entrada'
+    return (empleada["id"], empleada["nombre"]), None
+
+
 @app.context_processor
 def inject_iconos():
     return {
@@ -398,23 +423,11 @@ def registro():
             flash("Selecciona el tipo de movimiento")
             return redirect(url_for("registro"))
 
-        seleccion = request.form.get("empleada_id")
-        if not seleccion:
-            flash("Selecciona quién registra el ticket")
+        quien, error = _quien_registra(request.form.get("empleada_id"))
+        if error:
+            flash(error)
             return redirect(url_for("registro"))
-        if seleccion == "admin":
-            empleada_id_db = None
-            empleada_nombre = config.ADMIN_NOMBRE
-        else:
-            empleada = db.get_empleada(seleccion)
-            if not empleada:
-                flash("Selecciona quién registra el ticket")
-                return redirect(url_for("registro"))
-            if not db.get_fichaje_abierto(empleada["id"]):
-                flash(f'{empleada["nombre"]} no puede registrar sin haber fichado entrada')
-                return redirect(url_for("registro"))
-            empleada_id_db = empleada["id"]
-            empleada_nombre = empleada["nombre"]
+        empleada_id_db, empleada_nombre = quien
 
         try:
             lineas = json.loads(request.form.get("lineas") or "[]")
@@ -438,7 +451,7 @@ def registro():
                 valor_unitario = producto["precio_venta"]
             else:
                 valor_unitario = producto["coste"] if producto["coste"] is not None else producto["precio_venta"]
-            db.insert_movimiento(
+            movimiento_id = db.insert_movimiento(
                 producto_id=producto["id"],
                 producto_nombre=producto["nombre"],
                 tipo=tipo,
@@ -451,6 +464,9 @@ def registro():
                 empleada_nombre=empleada_nombre,
                 turno=turno,
             )
+            if tipo in db.TIPOS_STOCK_DESCUENTAN:
+                db.stock_descontar(fecha, producto["id"], producto["nombre"], cantidad, tipo,
+                                   empleada_nombre, movimiento_id)
             registrados += 1
 
         if registrados:
@@ -526,7 +542,60 @@ def registro():
         admin_nombre=config.ADMIN_NOMBRE,
         fichajes_activos=db.fichajes_activos(),
         ids_fichadas=ids_fichadas,
+        stock_hoy=db.stock_actual(hoy),
     )
+
+
+# ---------- stock del día ----------
+
+@app.route("/stock")
+@login_required
+def stock():
+    hoy = date.today().isoformat()
+    stock_hoy = db.stock_actual(hoy)
+    productos = list(db.list_productos())
+    # Primero los que ya tienen stock hoy (lo ya contado), luego el resto por categoría y nombre.
+    productos.sort(key=lambda p: (p["id"] not in stock_hoy, (p["categoria"] or "Otros").lower(), p["nombre"].lower()))
+    return render_template(
+        "stock.html",
+        productos=productos,
+        categorias=sorted({p["categoria"] or "Otros" for p in productos}, key=str.lower),
+        stock_hoy=stock_hoy,
+        movimientos=db.stock_movimientos_dia(hoy),
+        hoy=hoy,
+        empleadas=db.list_empleadas(),
+        ids_fichadas={f["empleada_id"] for f in db.fichajes_activos()},
+        admin_nombre=config.ADMIN_NOMBRE,
+    )
+
+
+@app.route("/stock/guardar", methods=["POST"])
+@login_required
+def stock_guardar():
+    quien, error = _quien_registra(request.form.get("empleada_id"))
+    if error:
+        flash(error)
+        return redirect(url_for("stock"))
+    _, quien_nombre = quien
+
+    hoy = date.today().isoformat()
+    guardados = 0
+    for producto in db.list_productos():
+        texto = request.form.get(f"cant_{producto['id']}", "")
+        cantidad = importador.parse_numero(texto)
+        if cantidad is None:
+            continue
+        if cantidad < 0:
+            flash(f'El stock de {producto["nombre"]} no puede ser negativo — se ha ignorado')
+            continue
+        if db.stock_fijar(hoy, producto["id"], producto["nombre"], cantidad, quien_nombre):
+            guardados += 1
+
+    if guardados:
+        flash(f"Stock guardado: {guardados} {'producto' if guardados == 1 else 'productos'}")
+    else:
+        flash("No había ningún cambio de stock que guardar")
+    return redirect(url_for("stock"))
 
 
 @app.route("/registro/<int:movimiento_id>/eliminar", methods=["POST"])
@@ -610,8 +679,15 @@ def turno_cerrar():
     turno_para_correo["cerrado_en"] = ahora
     turno_para_correo["cerrado_por"] = session.get("nombre")
 
+    fecha_stock = date.today().isoformat()
+    stock_dia = {
+        "fecha": fecha_stock,
+        "resumen": db.stock_resumen_dia(fecha_stock),
+        "movimientos": db.stock_movimientos_dia(fecha_stock),
+    }
+
     ok, mensaje = correo.enviar_informe_turno(
-        turno_para_correo, movimientos, totales_tipo, config.ADMIN_NOMBRE, fichajes
+        turno_para_correo, movimientos, totales_tipo, config.ADMIN_NOMBRE, fichajes, stock_dia
     )
 
     db.eliminar_errores_desde(turno["abierto_en"], ahora)
@@ -840,7 +916,7 @@ def configuracion_borrar_demo():
     respaldo.hacer_backup()
     db.borrar_datos_demo()
     flash(
-        "Datos de demo borrados: movimientos, fichajes, turnos y personal. "
+        "Datos de demo borrados: movimientos, stock, fichajes, turnos y personal. "
         "Productos y configuración no se han tocado. Se hizo una copia de seguridad justo antes."
     )
     return redirect(url_for("configuracion"))

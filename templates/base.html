@@ -29,6 +29,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/><circle cx="17" cy="17" r="0.5" fill="currentColor"/></svg>
           <span>Registrar</span>
         </a>
+        <a href="{{ url_for('stock') }}" class="navlink {{ 'active' if request.endpoint == 'stock' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-6 9 6v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9Z"/><path d="M9 21v-7h6v7"/></svg>
+          <span>Stock</span>
+        </a>
         {% if session.get('rol') == 'admin' %}
         <a href="{{ url_for('informes') }}" class="navlink {{ 'active' if request.endpoint == 'informes' else '' }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
@@ -89,7 +93,7 @@
         return false;
       }
       return confirm(
-        '¿Seguro? Se van a borrar TODOS los movimientos, fichajes, turnos y personal. ' +
+        '¿Seguro? Se van a borrar TODOS los movimientos, stock, fichajes, turnos y personal. ' +
         'Los productos y esta configuración no se tocan. Esto no se puede deshacer desde la app.'
       );
     }

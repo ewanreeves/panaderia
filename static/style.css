@@ -439,8 +439,22 @@ body:has(.login-box) {
   margin-top: auto;
 }
 
+.tile-stock {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--reciclaje);
+  margin-top: 4px;
+}
+.tile-stock-bajo { color: var(--danger); }
+
+.stock-filtros { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 6px 0 14px; }
+.stock-filtros input[type=text], .stock-filtros select { margin: 0; width: auto; min-width: 200px; }
+.stock-filtros .stock-solo { display: flex; align-items: center; gap: 6px; margin: 0; text-transform: none; letter-spacing: 0; font-size: 0.85rem; }
+.stock-input { margin: 0; max-width: 110px; padding: 6px 10px; }
+.stock-neg { color: var(--danger); }
+
 .ticket {
-  width: 340px;
+width: 340px;
   flex: none;
   background: linear-gradient(180deg, var(--card) 0%, var(--card-soft) 100%);
   border: 1px solid var(--line);

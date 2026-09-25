@@ -99,6 +99,22 @@ def init_db():
             FOREIGN KEY(empleada_id) REFERENCES empleadas(id)
         );
 
+        CREATE TABLE IF NOT EXISTS stock_movimientos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fecha TEXT NOT NULL,
+            creado TEXT NOT NULL,
+            producto_id INTEGER NOT NULL,
+            producto_nombre TEXT NOT NULL,
+            tipo TEXT NOT NULL,
+            delta REAL NOT NULL,
+            resultante REAL NOT NULL,
+            empleada_nombre TEXT,
+            movimiento_id INTEGER
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_stock_fecha ON stock_movimientos(fecha);
+        CREATE INDEX IF NOT EXISTS idx_stock_movimiento ON stock_movimientos(movimiento_id);
+
         CREATE TABLE IF NOT EXISTS turnos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             abierto_en TEXT NOT NULL,
@@ -301,7 +317,7 @@ def insert_movimiento(producto_id, producto_nombre, tipo, cantidad, valor_unitar
     if valor_unitario is not None:
         valor_total = round(float(valor_unitario) * float(cantidad), 2)
     conn = get_db()
-    conn.execute(
+    cur = conn.execute(
         """INSERT INTO movimientos
            (producto_id, producto_nombre, tipo, cantidad, valor_unitario, valor_total, motivo, fecha, creado,
             lote, empleada_id, empleada_nombre, turno)
@@ -323,7 +339,9 @@ def insert_movimiento(producto_id, producto_nombre, tipo, cantidad, valor_unitar
         ),
     )
     conn.commit()
+    nuevo_id = cur.lastrowid
     conn.close()
+    return nuevo_id
 
 
 def get_movimiento(movimiento_id):
@@ -342,6 +360,8 @@ def get_movimientos_por_lote(lote):
 
 def delete_movimiento(movimiento_id):
     conn = get_db()
+    # Si el movimiento había descontado stock, al borrarlo el stock se recupera.
+    conn.execute("DELETE FROM stock_movimientos WHERE movimiento_id = ?", (movimiento_id,))
     conn.execute("DELETE FROM movimientos WHERE id = ?", (movimiento_id,))
     conn.commit()
     conn.close()
@@ -349,6 +369,10 @@ def delete_movimiento(movimiento_id):
 
 def delete_movimientos_por_lote(lote):
     conn = get_db()
+    conn.execute(
+        "DELETE FROM stock_movimientos WHERE movimiento_id IN (SELECT id FROM movimientos WHERE lote = ?)",
+        (lote,),
+    )
     conn.execute("DELETE FROM movimientos WHERE lote = ?", (lote,))
     conn.commit()
     conn.close()
@@ -666,12 +690,115 @@ def delete_fichaje(fichaje_id):
     conn.close()
 
 
+# ---------- stock del día ----------
+#
+# El stock de un producto es la suma de sus cambios (stock_movimientos) del día. Como cada
+# consulta filtra por fecha, al llegar el día siguiente el stock vuelve a ser 0 solo, sin
+# ninguna tarea de "reinicio": hay que volver a meterlo a mano por la mañana. Los cambios
+# de días anteriores se conservan como histórico.
+
+TIPOS_STOCK_DESCUENTAN = ("merma", "reciclaje", "autoconsumo")
+
+
+def stock_actual(fecha):
+    """{producto_id: cantidad} de los productos que tienen stock declarado en esa fecha."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT producto_id, SUM(delta) AS cantidad FROM stock_movimientos WHERE fecha = ? GROUP BY producto_id",
+        (fecha,),
+    ).fetchall()
+    conn.close()
+    return {r["producto_id"]: round(r["cantidad"], 4) for r in rows}
+
+
+def stock_fijar(fecha, producto_id, producto_nombre, nueva_cantidad, empleada_nombre):
+    """Deja el stock del producto en `nueva_cantidad`. La primera vez del día cuenta como stock
+    inicial; las siguientes, como ajuste manual. Devuelve False si no cambia nada."""
+    conn = get_db()
+    row = conn.execute(
+        "SELECT COUNT(*) AS n, COALESCE(SUM(delta), 0) AS actual FROM stock_movimientos "
+        "WHERE fecha = ? AND producto_id = ?",
+        (fecha, producto_id),
+    ).fetchone()
+    hay_previo = row["n"] > 0
+    actual = row["actual"]
+    if hay_previo and abs(nueva_cantidad - actual) < 1e-9:
+        conn.close()
+        return False
+    conn.execute(
+        """INSERT INTO stock_movimientos
+           (fecha, creado, producto_id, producto_nombre, tipo, delta, resultante, empleada_nombre)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (fecha, datetime.now().isoformat(timespec="seconds"), producto_id, producto_nombre,
+         "ajuste" if hay_previo else "inicial", nueva_cantidad - actual, nueva_cantidad, empleada_nombre),
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def stock_descontar(fecha, producto_id, producto_nombre, cantidad, tipo, empleada_nombre, movimiento_id):
+    """Resta del stock del día lo que se ha registrado como merma/reciclaje/autoconsumo. Solo si
+    ese producto tiene stock declarado hoy (si nadie lo ha contado, no hay nada que descontar).
+    Devuelve el stock resultante, o None si no se ha descontado."""
+    conn = get_db()
+    row = conn.execute(
+        "SELECT COUNT(*) AS n, COALESCE(SUM(delta), 0) AS actual FROM stock_movimientos "
+        "WHERE fecha = ? AND producto_id = ?",
+        (fecha, producto_id),
+    ).fetchone()
+    if row["n"] == 0:
+        conn.close()
+        return None
+    resultante = row["actual"] - cantidad
+    conn.execute(
+        """INSERT INTO stock_movimientos
+           (fecha, creado, producto_id, producto_nombre, tipo, delta, resultante, empleada_nombre, movimiento_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (fecha, datetime.now().isoformat(timespec="seconds"), producto_id, producto_nombre,
+         tipo, -cantidad, resultante, empleada_nombre, movimiento_id),
+    )
+    conn.commit()
+    conn.close()
+    return resultante
+
+
+def stock_movimientos_dia(fecha):
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM stock_movimientos WHERE fecha = ? ORDER BY id ASC", (fecha,)
+    ).fetchall()
+    conn.close()
+    return rows
+
+
+def stock_resumen_dia(fecha):
+    """Una fila por producto con stock hoy: inicial, ajustes manuales, lo descontado por cada
+    tipo de movimiento y el stock actual. Ordenado por nombre."""
+    resumen = {}
+    for m in stock_movimientos_dia(fecha):
+        r = resumen.setdefault(m["producto_id"], {
+            "producto_id": m["producto_id"], "producto_nombre": m["producto_nombre"],
+            "inicial": 0.0, "ajustes": 0.0, "merma": 0.0, "reciclaje": 0.0, "autoconsumo": 0.0,
+            "actual": 0.0,
+        })
+        if m["tipo"] == "inicial":
+            r["inicial"] += m["delta"]
+        elif m["tipo"] == "ajuste":
+            r["ajustes"] += m["delta"]
+        elif m["tipo"] in TIPOS_STOCK_DESCUENTAN:
+            r[m["tipo"]] += -m["delta"]
+        r["actual"] += m["delta"]
+    return sorted(resumen.values(), key=lambda r: r["producto_nombre"].lower())
+
+
 # ---------- borrado de datos de demo ----------
 
 def borrar_datos_demo():
-    """Borra movimientos, fichajes, turnos y personal. No toca productos ni configuracion.
+    """Borra movimientos, stock, fichajes, turnos y personal. No toca productos ni configuracion.
     Deja un turno recién abierto para que la app siga usable justo después del borrado."""
     conn = get_db()
+    conn.execute("DELETE FROM stock_movimientos")
     conn.execute("DELETE FROM movimientos")
     conn.execute("DELETE FROM fichajes")
     conn.execute("DELETE FROM turnos")

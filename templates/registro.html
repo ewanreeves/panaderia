@@ -85,6 +85,9 @@
         {% endif %}
         <span class="tile-nombre">{{ p.nombre }}</span>
         <span class="tile-precio">{{ '%.2f'|format(p.precio_venta) ~ ' €' if p.precio_venta is not none else '' }}</span>
+        {% if p.id in stock_hoy %}
+        <span class="tile-stock {{ 'tile-stock-bajo' if stock_hoy[p.id] <= 0 }}">Stock {{ stock_hoy[p.id]|cant }}</span>
+        {% endif %}
       </button>
       {% endfor %}
     </div>

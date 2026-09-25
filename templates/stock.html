@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Stock{% endblock %}
+{% block content %}
+<h1>Stock del día</h1>
+<p class="ayuda">
+  Cuenta lo que hay al abrir la tienda y anótalo aquí. Se va descontando solo con cada merma, reciclaje
+  o autoconsumo que se registre, y se queda así todo el día salvo que lo cambies a mano. Mañana
+  empieza otra vez en 0: hay que volver a meterlo por la mañana. Los errores de caja no descuentan stock.
+</p>
+
+<form method="post" action="{{ url_for('stock_guardar') }}" class="card" id="stock-form">
+  <label class="campo-pequeno">Quién anota
+    <select name="empleada_id" required>
+      <option value="" selected disabled>— Selecciona quién eres —</option>
+      {% for e in empleadas if e.id in ids_fichadas %}
+      <option value="{{ e.id }}">{{ e.nombre }}</option>
+      {% endfor %}
+      <option value="admin">{{ admin_nombre }}</option>
+    </select>
+  </label>
+  {% if empleadas and not (empleadas|selectattr('id', 'in', ids_fichadas)|list) %}
+  <p class="ayuda">Nadie del personal ha fichado entrada todavía — que fichen en Registrar antes de anotar.</p>
+  {% endif %}
+
+  <div class="stock-filtros">
+    <input type="text" id="stock-buscar" placeholder="Buscar producto…" autocomplete="off">
+    <select id="stock-categoria">
+      <option value="">Todas las categorías</option>
+      {% for c in categorias %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+    </select>
+    <label class="stock-solo"><input type="checkbox" id="stock-solo-contados"> Solo los ya contados hoy</label>
+  </div>
+
+  <div class="tabla-scroll">
+  <table class="tabla" id="stock-tabla">
+    <thead><tr><th>Producto</th><th>Categoría</th><th>Stock ahora</th><th>Nuevo valor</th></tr></thead>
+    <tbody>
+      {% for p in productos %}
+      <tr data-nombre="{{ p.nombre|lower }}" data-categoria="{{ p.categoria or 'Otros' }}"
+          data-contado="{{ '1' if p.id in stock_hoy else '0' }}">
+        <td>{{ p.nombre }}</td>
+        <td>{{ p.categoria or 'Otros' }}</td>
+        <td>
+          {% if p.id in stock_hoy %}
+          <b class="{{ 'stock-neg' if stock_hoy[p.id] < 0 }}">{{ stock_hoy[p.id]|cant }}</b>
+          {% else %}<span class="ayuda">sin contar</span>{% endif %}
+        </td>
+        <td><input type="text" inputmode="decimal" name="cant_{{ p.id }}" class="stock-input" placeholder="—" autocomplete="off"></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="empty">Todavía no hay productos.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="ayuda" id="stock-sin-resultados" hidden>Ningún producto coincide con la búsqueda.</p>
+
+  <p class="ayuda">Solo se guardan las casillas que rellenes; las vacías no cambian nada.</p>
+  <button type="submit">Guardar stock</button>
+</form>
+
+<h2>Movimientos de stock de hoy</h2>
+<div class="tabla-scroll">
+<table class="tabla">
+  <thead><tr><th>Hora</th><th>Producto</th><th>Tipo</th><th>Cambio</th><th>Resultado</th><th>Personal</th></tr></thead>
+  <tbody>
+    {% for m in movimientos|reverse %}
+    <tr>
+      <td>{{ m.creado[11:16] }}</td>
+      <td>{{ m.producto_nombre }}</td>
+      <td>{{ {'inicial': 'Stock inicial', 'ajuste': 'Ajuste a mano', 'merma': '🗑️ Merma', 'reciclaje': '♻️ Reciclaje', 'autoconsumo': '🍽️ Autoconsumo'}.get(m.tipo, m.tipo) }}</td>
+      <td>{{ ('+' if m.delta > 0 else '') ~ (m.delta|cant) }}</td>
+      <td>{{ m.resultante|cant }}</td>
+      <td>{{ m.empleada_nombre or '' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="empty">Hoy todavía no se ha anotado stock</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='stock.js') }}"></script>
+{% endblock %}
